@@ -3,6 +3,9 @@
 mod app;
 mod config;
 mod i18n;
+mod watchlist;
+mod applet;
+mod palette;
 
 fn main() -> cosmic::iced::Result {
     // Get the system's preferred languages.

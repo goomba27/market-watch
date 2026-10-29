@@ -5,11 +5,20 @@ use std::fmt::format;
 use crate::config::Config;
 use crate::fl;
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
+use cosmic::iced::{Alignment, Length};
+use cosmic::theme;
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
 use cosmic::iced::{Limits, Subscription, futures, window::Id};
 use cosmic::prelude::*;
 use cosmic::widget;
 use futures::SinkExt;
+use cosmic::iced::{Background, Border};
+
+
+
+use crate::watchlist::Watchlist;
+use crate::applet::*;
+use crate::palette;
 
 /// The application model stores app-specific state used to describe its interface and
 /// drive its logic.
@@ -24,6 +33,7 @@ pub struct AppModel {
     /// Example row toggler.
     example_row: bool,
     example_text: String,
+    watchlists: Vec<Watchlist>,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -34,6 +44,10 @@ pub enum Message {
     SubscriptionChannel,
     UpdateConfig(Config),
     ToggleExampleRow(bool),
+
+    //Watchlist
+    AddWatchlist,
+    SelectList(usize)
 }
 
 /// Create a COSMIC application from the app model
@@ -106,14 +120,39 @@ impl cosmic::Application for AppModel {
     /// multiple poups, you may match the id parameter to determine which popup to
     /// create a view for.
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
-        let content_list = widget::list_column()
-            .add(widget::text(&self.example_text))
-            .add(widget::settings::item(
-                fl!("example-row"),
-                widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
-            ));
+        // let content_list = widget::list_column()
+        //     .add(widget::text(&self.example_text))
+        //     .add(widget::settings::item(
+        //         fl!("example-row"),
+        //         widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
+        //     ));
 
-        self.core.applet.popup_container(content_list).into()
+
+        let tabs = widget::container(
+            widget::row::with_capacity(4)
+                .push(tab("Tech Titans", 8, true, Message::SelectList(0)))
+                .push(tab("EV & Clean Energy", 5, false, Message::SelectList(1)))
+                .push(tab("Dividend Kings", 12, false, Message::SelectList(2)))
+                .push(new_list_button())
+                .spacing(8)
+                .align_y(Alignment::Center),
+        )
+        .padding(8)
+        .width(Length::Fill)
+        .class(theme::Container::custom(|_| {
+            cosmic::iced::widget::container::Style {
+                background: Some(Background::Color(palette::SURFACE_CONTAINER_LOW)),
+                border: Border {
+                    radius: 0.0.into(),
+                    width: 1.0,
+                    color: palette::OUTLINE_VARIANT,
+                },
+                ..Default::default()
+            }
+        }));
+
+
+        self.core.applet.popup_container(tabs).into()
     }
 
     /// Register subscriptions for this application.
@@ -181,9 +220,9 @@ impl cosmic::Application for AppModel {
                         None,
                     );
                     popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(500.0)
-                        .min_width(500.0)
-                        .min_height(200.0)
+                        .max_width(600.0)
+                        .min_width(600.0)
+                        .min_height(600.0)
                         .max_height(1080.0);
                     get_popup(popup_settings)
                 };
@@ -193,6 +232,8 @@ impl cosmic::Application for AppModel {
                     self.popup = None;
                 }
             }
+            Message::AddWatchlist => todo!(),
+            Message::SelectList(_) => todo!(),
         }
         Task::none()
     }
