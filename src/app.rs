@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::fmt::format;
+
 use crate::config::Config;
 use crate::fl;
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
-use cosmic::iced::{futures, window::Id, Limits, Subscription};
+use cosmic::iced::{Limits, Subscription, futures, window::Id};
 use cosmic::prelude::*;
 use cosmic::widget;
 use futures::SinkExt;
@@ -21,6 +23,7 @@ pub struct AppModel {
     config: Config,
     /// Example row toggler.
     example_row: bool,
+    example_text: String,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -62,6 +65,7 @@ impl cosmic::Application for AppModel {
     ) -> (Self, Task<cosmic::Action<Self::Message>>) {
         // Construct the app model with the runtime's core.
         let app = AppModel {
+            example_text: String::from("Init Values"),
             core,
             config: cosmic_config::Config::new(Self::APP_ID, Config::VERSION)
                 .map(|context| match Config::get_entry(&context) {
@@ -102,10 +106,12 @@ impl cosmic::Application for AppModel {
     /// multiple poups, you may match the id parameter to determine which popup to
     /// create a view for.
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
-        let content_list = widget::list_column().add(widget::settings::item(
-            fl!("example-row"),
-            widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
-        ));
+        let content_list = widget::list_column()
+            .add(widget::text(&self.example_text))
+            .add(widget::settings::item(
+                fl!("example-row"),
+                widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
+            ));
 
         self.core.applet.popup_container(content_list).into()
     }
@@ -122,11 +128,14 @@ impl cosmic::Application for AppModel {
         Subscription::batch(vec![
             // Create a subscription which emits updates through a channel.
             Subscription::run(|| {
-                cosmic::iced::stream::channel(4, move |mut channel: futures::channel::mpsc::Sender<_>| async move {
-                    _ = channel.send(Message::SubscriptionChannel).await;
+                cosmic::iced::stream::channel(
+                    4,
+                    move |mut channel: futures::channel::mpsc::Sender<_>| async move {
+                        _ = channel.send(Message::SubscriptionChannel).await;
 
-                    futures::future::pending().await
-                })
+                        futures::future::pending().await
+                    },
+                )
             }),
             // Watch for application configuration changes.
             self.core()
@@ -154,7 +163,10 @@ impl cosmic::Application for AppModel {
             Message::UpdateConfig(config) => {
                 self.config = config;
             }
-            Message::ToggleExampleRow(toggled) => self.example_row = toggled,
+            Message::ToggleExampleRow(toggled) => {
+                self.example_row = toggled;
+                self.example_text = format!("Toggle is {}", toggled)
+            }
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
                     destroy_popup(p)
@@ -169,12 +181,12 @@ impl cosmic::Application for AppModel {
                         None,
                     );
                     popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372.0)
-                        .min_width(300.0)
+                        .max_width(500.0)
+                        .min_width(500.0)
                         .min_height(200.0)
                         .max_height(1080.0);
                     get_popup(popup_settings)
-                }
+                };
             }
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {

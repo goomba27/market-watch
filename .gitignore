@@ -12,3 +12,8 @@ debian/*
 !debian/install
 !debian/rules
 !debian/source
+
+# Editor / IDE
+.idea/
+.vscode/
+.zed/
