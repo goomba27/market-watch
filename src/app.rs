@@ -1,23 +1,22 @@
 // SPDX-License-Identifier: MPL-2.0
 
-use std::fmt::format;
-
+use crate::applet::*;
 use crate::config::Config;
-use crate::fl;
+use crate::palette;
+use crate::watchlist::Watchlist;
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
+use cosmic::iced::platform_specific::shell::wayland::commands::popup::{
+    destroy_popup, get_popup,
+};
 use cosmic::iced::{Alignment, Length};
-use cosmic::theme;
-use cosmic::iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
+use cosmic::iced::{Background, Border};
 use cosmic::iced::{Limits, Subscription, futures, window::Id};
 use cosmic::prelude::*;
+use cosmic::theme;
 use cosmic::widget;
 use futures::SinkExt;
-use cosmic::iced::{Background, Border};
 
-use crate::watchlist::Watchlist;
-use crate::applet::*;
-use crate::palette;
-
+const TAB_WIDTH: f32 = 150.0;
 /// The application model stores app-specific state used to describe its interface and
 /// drive its logic.
 #[derive(Default)]
@@ -32,6 +31,7 @@ pub struct AppModel {
     example_row: bool,
     example_text: String,
     watchlists: Vec<Watchlist>,
+    selected_list: usize,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -80,6 +80,7 @@ impl cosmic::Application for AppModel {
         let app = AppModel {
             example_text: String::from("Init Values"),
             core,
+            selected_list: 0,
             config: cosmic_config::Config::new(Self::APP_ID, Config::VERSION)
                 .map(|context| match Config::get_entry(&context) {
                     Ok(config) => config,
@@ -92,6 +93,40 @@ impl cosmic::Application for AppModel {
                     }
                 })
                 .unwrap_or_default(),
+            watchlists: vec![
+                Watchlist {
+                    index: 0,
+                    name: "List 1".to_string(),
+                    tickers: vec!["NVDA".to_string(), "AMD".to_string()],
+                    count: 2,
+                },
+                Watchlist {
+                    index: 1,
+                    name: "List 2".to_string(),
+                    tickers: vec!["NVDA".to_string(), "AMD".to_string()],
+                    count: 2,
+                },
+                Watchlist {
+                    index: 2,
+                    name: "List 3".to_string(),
+                    tickers: vec![
+                        "NVDA".to_string(),
+                        "AMD".to_string(),
+                        "GOOG".to_string(),
+                    ],
+                    count: 2,
+                },
+                Watchlist {
+                    index: 3,
+                    name: "List 4".to_string(),
+                    tickers: vec![
+                        "NVDA".to_string(),
+                        "AMD".to_string(),
+                        "GOOG".to_string(),
+                    ],
+                    count: 2,
+                },
+            ],
             ..Default::default()
         };
 
@@ -141,7 +176,10 @@ impl cosmic::Application for AppModel {
     /// Tasks may be returned for asynchronous execution of code in the background
     /// on the application's async runtime. The application will not exit until all
     /// tasks are finished.
-    fn update(&mut self, message: Self::Message) -> Task<cosmic::Action<Self::Message>> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> Task<cosmic::Action<Self::Message>> {
         match message {
             Message::SubscriptionChannel => {
                 // For example purposes only.
@@ -159,13 +197,14 @@ impl cosmic::Application for AppModel {
                 } else {
                     let new_id = Id::unique();
                     self.popup.replace(new_id);
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
+                    let mut popup_settings =
+                        self.core.applet.get_popup_settings(
+                            self.core.main_window_id().unwrap(),
+                            new_id,
+                            None,
+                            None,
+                            None,
+                        );
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(600.0)
                         .min_width(600.0)
@@ -210,40 +249,77 @@ impl cosmic::Application for AppModel {
         //         widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
         //     ));
 
+        let title = widget::container(
+             widget::text::title2("Market Watch"))
+            .padding(8)
+            .width(Length::Fill)
+            .align_x(Alignment::Center);
 
-        let tabs = widget::container(
-            widget::row::with_capacity(4)
-                .push(header_button("Tech Titans", 8, true, Message::SelectList(0)))
-                .push(header_button("EV & Clean Energy", 5, false, Message::SelectList(1)))
-                .push(header_button("Dividend Kings", 12, false, Message::SelectList(2)))
-                .push(new_list_button())
-                .spacing(8)
-                .align_y(Alignment::Center),
+        let tab_row = widget::row::with_children(
+            self.watchlists
+                .iter()
+                .enumerate()
+                .map(|(i, l)| {
+                    widget::container(
+                        watchlist_buttons(
+                            &l.name,
+                            l.count,
+                            i == self.selected_list,
+                            Message::SelectList(i),
+                        ))
+                    .width(Length::Fixed(TAB_WIDTH))
+                    .into()
+                })
+                .collect::<Vec<_>>(),
         )
-        .padding(8)
-        .width(Length::Fill)
-        .class(theme::Container::custom(|_| {
-            cosmic::iced::widget::container::Style {
-                background: Some(Background::Color(palette::SURFACE_CONTAINER_LOW)),
-                border: Border {
-                    radius: 0.0.into(),
-                    width: 1.0,
-                    color: palette::OUTLINE_VARIANT,
-                },
-                ..Default::default()
-            }
-        }));
+        .spacing(8)
+        .padding([0, 0, 15, 0]) //handles scrollbar overlap
+        .align_y(Alignment::Center);
 
-//Set to fill for height
-        let content = widget::column::with_capacity(1).push(tabs).height(Length::Fixed(600.0));
+        let scroller = widget::scrollable::horizontal(tab_row).width(Length::Fill);
 
-        self.core.applet.popup_container(  content)
-            .limits(Limits::NONE
-                .min_width(600.0)
-                .max_width(600.0)
-                .min_height(600.0)
-                .max_height(600.0),
-            ).into()
+        // Column 2: New List button, pinned to the right.
+        let header = widget::row::with_capacity(2)
+            .push(scroller)
+            .push(new_list_button())
+            .spacing(8)
+            .align_y(Alignment::Start); //start at the top to match the others
+
+        let tabs = widget::container(header)
+            .padding(8)
+            .width(Length::Fill)
+            
+            .class(theme::Container::custom(|_| {
+                cosmic::iced::widget::container::Style {
+                    background: Some(Background::Color(
+                        palette::SURFACE_CONTAINER_LOW,
+                    )),
+                    border: Border {
+                        radius: 0.0.into(),
+                        width: 1.0,
+                        color: palette::OUTLINE_VARIANT,
+                    },
+                    ..Default::default()
+                }
+            }));
+
+        //Set to fill for height
+        let content = widget::column::with_capacity(2)
+            .push(title)
+            .push(tabs)
+            .height(Length::Fixed(600.0));
+
+        self.core
+            .applet
+            .popup_container(content)
+            .limits(
+                Limits::NONE
+                    .min_width(600.0)
+                    .max_width(600.0)
+                    .min_height(600.0)
+                    .max_height(600.0),
+            )
+            .into()
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {

@@ -1,20 +1,21 @@
-use cosmic::iced::Background;
-use cosmic::widget::button::Style as ButtonStyle;
-use cosmic::{widget,theme};
-use cosmic::iced::{Alignment, Length};
-use cosmic::Element;
 use crate::app::Message;
 use crate::palette;
+use cosmic::Element;
+use cosmic::iced::Background;
+use cosmic::iced::{Alignment, Length};
+use cosmic::widget::button::Style as ButtonStyle;
+use cosmic::{theme, widget};
 
 
-pub fn header_button(
+pub fn watchlist_buttons(
     name: &str,
-    count: u32,
+    count: usize,
     selected: bool,
-    on_press: Message,) -> Element<'_, Message> {
-
-        // label: let the text take the spare space so it wraps instead of forcing the button wider
-        let label = widget::text::body(name)
+    on_press: Message,
+) -> Element<'_, Message> {
+    // label: wraps instead of forcing the button wider
+    let label =
+        widget::text::body(name)
             .width(Length::Fill)
             .class(theme::Text::Color(if selected {
                 palette::PRIMARY
@@ -22,37 +23,37 @@ pub fn header_button(
                 palette::ON_SURFACE
             }));
 
-   let badge = widget::container(widget::text::caption(count.to_string()))
-           .padding([1, 6])
-           .class(theme::Container::custom(|_| {
-               cosmic::iced::widget::container::Style {
-                   background: Some(cosmic::iced::Background::Color(
-                       palette::SURFACE_CONTAINER_HIGHEST,
-                   )),
-                   border: cosmic::iced::Border {
-                       radius: 0.0.into(), ..Default::default()
-                   },
-                   ..Default::default()
-               }
-           }));
+    let badge = widget::container(widget::text::caption(count.to_string()))
+        .padding([1, 6])
+        .class(theme::Container::custom(|_| {
+            cosmic::iced::widget::container::Style {
+                background: Some(cosmic::iced::Background::Color(
+                    palette::SURFACE_CONTAINER_HIGHEST,
+                )),
+                border: cosmic::iced::Border {
+                    radius: 0.0.into(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }
+        }));
 
-   // button: share the row equally
-   widget::button::custom(
-       widget::row::with_capacity(2)
-           .push(label)
-           .push(badge)
-           .spacing(8)
-           .align_y(Alignment::Center)
-           .height(Length::Fill),
-   )
-   .width(Length::Fill)          // <-- add
-   .height(Length::Fixed(48.0))
-       .padding([8, 14])
-   .class(square_tab(selected))
-   .on_press(on_press)
-   .into()
+    // button: share the row equally
+    widget::button::custom(
+        widget::row::with_capacity(2)
+            .push(label)
+            .push(badge)
+            .spacing(8)
+            .align_y(Alignment::Center)
+            .height(Length::Fill),
+    )
+    .width(Length::Fill) // <-- add
+    .height(Length::Fixed(48.0))
+    .padding([8, 14])
+    .class(square_tab(selected))
+    .on_press(on_press)
+    .into()
 }
-
 
 pub fn new_list_button<'a>() -> Element<'a, Message> {
     widget::button::custom(
@@ -64,24 +65,24 @@ pub fn new_list_button<'a>() -> Element<'a, Message> {
             .align_y(Alignment::Center),
     )
     .padding([8, 12])
-        .height(Length::Fixed(48.0))
+    .height(Length::Fixed(48.0))
     .class(square_tab(false))
     .on_press(Message::AddWatchlist)
     .into()
 }
-pub fn  ticker_list<'a>() -> Element<'a, Message>
-{
-   let text = widget::text::text("Ticker");
+pub fn ticker_list<'a>() -> Element<'a, Message> {
+    let text = widget::text::text("Ticker");
 
     text.into()
 }
 
-
-
-
 /// Square tab style. `selected` tints the background and uses the accent color.
 fn square_tab(selected: bool) -> theme::Button {
-    fn style(_theme: &cosmic::Theme, selected: bool, hover: bool) -> ButtonStyle {
+    fn style(
+        _theme: &cosmic::Theme,
+        selected: bool,
+        hover: bool,
+    ) -> ButtonStyle {
         let mut s = ButtonStyle::new();
 
         let bg = if selected {
