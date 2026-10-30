@@ -14,29 +14,10 @@ pub fn watchlist_buttons(
     on_press: Message,
 ) -> Element<'_, Message> {
     // label: wraps instead of forcing the button wider
-    let label =
-        widget::text::body(name)
-            .width(Length::Fill)
-            .class(theme::Text::Color(if selected {
-                palette::PRIMARY
-            } else {
-                palette::ON_SURFACE
-            }));
+    let label = widget::text::body(name).width(Length::Fill);
 
     let badge = widget::container(widget::text::caption(count.to_string()))
-        .padding([1, 6])
-        .class(theme::Container::custom(|_| {
-            cosmic::iced::widget::container::Style {
-                background: Some(cosmic::iced::Background::Color(
-                    palette::SURFACE_CONTAINER_HIGHEST,
-                )),
-                border: cosmic::iced::Border {
-                    radius: 0.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        }));
+        .padding([1, 6]);
 
     // button: share the row equally
     widget::button::custom(
@@ -47,10 +28,9 @@ pub fn watchlist_buttons(
             .align_y(Alignment::Center)
             .height(Length::Fill),
     )
-    .width(Length::Fill) // <-- add
+    .width(Length::Fill)
     .height(Length::Fixed(48.0))
     .padding([8, 14])
-    .class(square_tab(selected))
     .on_press(on_press)
     .into()
 }
@@ -66,14 +46,17 @@ pub fn new_list_button<'a>() -> Element<'a, Message> {
     )
     .padding([8, 12])
     .height(Length::Fixed(48.0))
-    .class(square_tab(false))
+    // .class(square_tab(false))
     .on_press(Message::AddWatchlist)
     .into()
 }
-pub fn ticker_list<'a>() -> Element<'a, Message> {
-    let text = widget::text::text("Ticker");
 
-    text.into()
+pub fn ticker_row(symbol: &str) -> Element<'_, Message>{
+    widget::row::with_capacity(2)
+        .push(widget::text::body(symbol).width(Length::Fill))
+        .push(widget::text("--"))
+        .align_y(Alignment::Center)
+        .into()
 }
 
 /// Square tab style. `selected` tints the background and uses the accent color.

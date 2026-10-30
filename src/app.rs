@@ -17,8 +17,7 @@ use cosmic::widget;
 use futures::SinkExt;
 
 const TAB_WIDTH: f32 = 150.0;
-/// The application model stores app-specific state used to describe its interface and
-/// drive its logic.
+
 #[derive(Default)]
 pub struct AppModel {
     /// Application state which is managed by the COSMIC runtime.
@@ -51,13 +50,9 @@ pub enum Message {
 
 /// Create a COSMIC application from the app model
 impl cosmic::Application for AppModel {
-    /// The async executor that will be used to run your application's commands.
+
     type Executor = cosmic::executor::Default;
-
-    /// Data that your application receives to its init method.
     type Flags = ();
-
-    /// Messages which the application and its widgets will emit.
     type Message = Message;
 
     /// Unique identifier in RDNN (reverse domain name notation) format.
@@ -71,12 +66,10 @@ impl cosmic::Application for AppModel {
         &mut self.core
     }
 
-    /// Initializes the application with any given flags and startup commands.
     fn init(
         core: cosmic::Core,
         _flags: Self::Flags,
     ) -> (Self, Task<cosmic::Action<Self::Message>>) {
-        // Construct the app model with the runtime's core.
         let app = AppModel {
             example_text: String::from("Init Values"),
             core,
@@ -85,29 +78,22 @@ impl cosmic::Application for AppModel {
                 .map(|context| match Config::get_entry(&context) {
                     Ok(config) => config,
                     Err((_errors, config)) => {
-                        // for why in errors {
-                        //     tracing::error!(%why, "error loading app config");
-                        // }
-
                         config
                     }
                 })
                 .unwrap_or_default(),
             watchlists: vec![
                 Watchlist {
-                    index: 0,
                     name: "List 1".to_string(),
                     tickers: vec!["NVDA".to_string(), "AMD".to_string()],
                     count: 2,
                 },
                 Watchlist {
-                    index: 1,
                     name: "List 2".to_string(),
                     tickers: vec!["NVDA".to_string(), "AMD".to_string()],
                     count: 2,
                 },
                 Watchlist {
-                    index: 2,
                     name: "List 3".to_string(),
                     tickers: vec![
                         "NVDA".to_string(),
@@ -117,7 +103,6 @@ impl cosmic::Application for AppModel {
                     count: 2,
                 },
                 Watchlist {
-                    index: 3,
                     name: "List 4".to_string(),
                     tickers: vec![
                         "NVDA".to_string(),
@@ -137,12 +122,6 @@ impl cosmic::Application for AppModel {
         Some(Message::PopupClosed(id))
     }
 
-    /// Register subscriptions for this application.
-    ///
-    /// Subscriptions are long-lived async tasks running in the background which
-    /// emit messages to the application through a channel. They may be conditionally
-    /// activated by selectively appending to the subscription batch, and will
-    /// continue to execute for the duration that they remain in the batch.
     fn subscription(&self) -> Subscription<Self::Message> {
         struct MySubscription;
 
@@ -171,11 +150,6 @@ impl cosmic::Application for AppModel {
         ])
     }
 
-    /// Handles messages emitted by the application and its widgets.
-    ///
-    /// Tasks may be returned for asynchronous execution of code in the background
-    /// on the application's async runtime. The application will not exit until all
-    /// tasks are finished.
     fn update(
         &mut self,
         message: Self::Message,
@@ -219,17 +193,12 @@ impl cosmic::Application for AppModel {
                 }
             }
             Message::AddWatchlist => todo!(),
-            Message::SelectList(_) => todo!(),
+            Message::SelectList(i) => self.selected_list = i,
             Message::SelectPopup(_) => {}
         }
         Task::none()
     }
 
-    /// Describes the interface based on the current state of the application model.
-    ///
-    /// The applet's button in the panel will be drawn using the main view method.
-    /// This view should emit messages to toggle the applet's popup window, which will
-    /// be drawn using the `view_window` method.
     fn view(&self) -> Element<'_, Self::Message> {
         self.core
             .applet
@@ -238,16 +207,24 @@ impl cosmic::Application for AppModel {
             .into()
     }
 
-    /// The applet's popup window will be drawn using this view method. If there are
-    /// multiple poups, you may match the id parameter to determine which popup to
-    /// create a view for.
+
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
-        // let content_list = widget::list_column()
-        //     .add(widget::text(&self.example_text))
-        //     .add(widget::settings::item(
-        //         fl!("example-row"),
-        //         widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
-        //     ));
+        let selected = self.watchlists.get(self.selected_list);
+
+        let list: Element<Message> = match selected {
+            Some(w) if !w.tickers.is_empty() => w
+                .tickers
+                .iter()
+                .fold(widget::list_column(), |col, t| col.add(ticker_row(t)))
+                .into_element(),
+           _ => widget::text::body("No ticker yet")
+               .into(),
+        };
+
+        let body = widget::container(widget::scrollable::vertical(list))
+            .padding(8)
+            .width(Length::Fill)
+            .height(Length::Fill);
 
         let title = widget::container(
              widget::text::title2("Market Watch"))
@@ -287,26 +264,13 @@ impl cosmic::Application for AppModel {
 
         let tabs = widget::container(header)
             .padding(8)
-            .width(Length::Fill)
-            
-            .class(theme::Container::custom(|_| {
-                cosmic::iced::widget::container::Style {
-                    background: Some(Background::Color(
-                        palette::SURFACE_CONTAINER_LOW,
-                    )),
-                    border: Border {
-                        radius: 0.0.into(),
-                        width: 1.0,
-                        color: palette::OUTLINE_VARIANT,
-                    },
-                    ..Default::default()
-                }
-            }));
+            .width(Length::Fill);
 
         //Set to fill for height
-        let content = widget::column::with_capacity(2)
+        let content = widget::column::with_capacity(3)
             .push(title)
             .push(tabs)
+            .push(body)                          // new
             .height(Length::Fixed(600.0));
 
         self.core
