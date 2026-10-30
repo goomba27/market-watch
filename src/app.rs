@@ -14,8 +14,6 @@ use cosmic::widget;
 use futures::SinkExt;
 use cosmic::iced::{Background, Border};
 
-
-
 use crate::watchlist::Watchlist;
 use crate::applet::*;
 use crate::palette;
@@ -47,7 +45,8 @@ pub enum Message {
 
     //Watchlist
     AddWatchlist,
-    SelectList(usize)
+    SelectList(usize),
+    SelectPopup(usize),
 }
 
 /// Create a COSMIC application from the app model
@@ -101,58 +100,6 @@ impl cosmic::Application for AppModel {
 
     fn on_close_requested(&self, id: Id) -> Option<Message> {
         Some(Message::PopupClosed(id))
-    }
-
-    /// Describes the interface based on the current state of the application model.
-    ///
-    /// The applet's button in the panel will be drawn using the main view method.
-    /// This view should emit messages to toggle the applet's popup window, which will
-    /// be drawn using the `view_window` method.
-    fn view(&self) -> Element<'_, Self::Message> {
-        self.core
-            .applet
-            .icon_button("display-symbolic")
-            .on_press(Message::TogglePopup)
-            .into()
-    }
-
-    /// The applet's popup window will be drawn using this view method. If there are
-    /// multiple poups, you may match the id parameter to determine which popup to
-    /// create a view for.
-    fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
-        // let content_list = widget::list_column()
-        //     .add(widget::text(&self.example_text))
-        //     .add(widget::settings::item(
-        //         fl!("example-row"),
-        //         widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
-        //     ));
-
-
-        let tabs = widget::container(
-            widget::row::with_capacity(4)
-                .push(tab("Tech Titans", 8, true, Message::SelectList(0)))
-                .push(tab("EV & Clean Energy", 5, false, Message::SelectList(1)))
-                .push(tab("Dividend Kings", 12, false, Message::SelectList(2)))
-                .push(new_list_button())
-                .spacing(8)
-                .align_y(Alignment::Center),
-        )
-        .padding(8)
-        .width(Length::Fill)
-        .class(theme::Container::custom(|_| {
-            cosmic::iced::widget::container::Style {
-                background: Some(Background::Color(palette::SURFACE_CONTAINER_LOW)),
-                border: Border {
-                    radius: 0.0.into(),
-                    width: 1.0,
-                    color: palette::OUTLINE_VARIANT,
-                },
-                ..Default::default()
-            }
-        }));
-
-
-        self.core.applet.popup_container(tabs).into()
     }
 
     /// Register subscriptions for this application.
@@ -234,8 +181,69 @@ impl cosmic::Application for AppModel {
             }
             Message::AddWatchlist => todo!(),
             Message::SelectList(_) => todo!(),
+            Message::SelectPopup(_) => {}
         }
         Task::none()
+    }
+
+    /// Describes the interface based on the current state of the application model.
+    ///
+    /// The applet's button in the panel will be drawn using the main view method.
+    /// This view should emit messages to toggle the applet's popup window, which will
+    /// be drawn using the `view_window` method.
+    fn view(&self) -> Element<'_, Self::Message> {
+        self.core
+            .applet
+            .icon_button("display-symbolic")
+            .on_press(Message::TogglePopup)
+            .into()
+    }
+
+    /// The applet's popup window will be drawn using this view method. If there are
+    /// multiple poups, you may match the id parameter to determine which popup to
+    /// create a view for.
+    fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
+        // let content_list = widget::list_column()
+        //     .add(widget::text(&self.example_text))
+        //     .add(widget::settings::item(
+        //         fl!("example-row"),
+        //         widget::toggler(self.example_row).on_toggle(Message::ToggleExampleRow),
+        //     ));
+
+
+        let tabs = widget::container(
+            widget::row::with_capacity(4)
+                .push(header_button("Tech Titans", 8, true, Message::SelectList(0)))
+                .push(header_button("EV & Clean Energy", 5, false, Message::SelectList(1)))
+                .push(header_button("Dividend Kings", 12, false, Message::SelectList(2)))
+                .push(new_list_button())
+                .spacing(8)
+                .align_y(Alignment::Center),
+        )
+        .padding(8)
+        .width(Length::Fill)
+        .class(theme::Container::custom(|_| {
+            cosmic::iced::widget::container::Style {
+                background: Some(Background::Color(palette::SURFACE_CONTAINER_LOW)),
+                border: Border {
+                    radius: 0.0.into(),
+                    width: 1.0,
+                    color: palette::OUTLINE_VARIANT,
+                },
+                ..Default::default()
+            }
+        }));
+
+//Set to fill for height
+        let content = widget::column::with_capacity(1).push(tabs).height(Length::Fixed(600.0));
+
+        self.core.applet.popup_container(  content)
+            .limits(Limits::NONE
+                .min_width(600.0)
+                .max_width(600.0)
+                .min_height(600.0)
+                .max_height(600.0),
+            ).into()
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {

@@ -1,3 +1,5 @@
+use cosmic::iced::Background;
+use cosmic::widget::button::Style as ButtonStyle;
 use cosmic::{widget,theme};
 use cosmic::iced::{Alignment, Length};
 use cosmic::Element;
@@ -5,11 +7,11 @@ use crate::app::Message;
 use crate::palette;
 
 
-pub fn  tab<'a>(
-    name: &'a str,
+pub fn header_button(
+    name: &str,
     count: u32,
     selected: bool,
-    on_press: Message,) -> Element<'a, Message>{
+    on_press: Message,) -> Element<'_, Message> {
 
         // label: let the text take the spare space so it wraps instead of forcing the button wider
         let label = widget::text::body(name)
@@ -40,14 +42,17 @@ pub fn  tab<'a>(
            .push(label)
            .push(badge)
            .spacing(8)
-           .align_y(Alignment::Center),
+           .align_y(Alignment::Center)
+           .height(Length::Fill),
    )
    .width(Length::Fill)          // <-- add
-   .padding([8, 14])
+   .height(Length::Fixed(48.0))
+       .padding([8, 14])
    .class(square_tab(selected))
    .on_press(on_press)
    .into()
 }
+
 
 pub fn new_list_button<'a>() -> Element<'a, Message> {
     widget::button::custom(
@@ -55,20 +60,24 @@ pub fn new_list_button<'a>() -> Element<'a, Message> {
             .push(widget::icon::from_name("list-add-symbolic").size(14))
             .push(widget::text::caption("New\nList"))
             .spacing(6)
+            .height(Length::Fill)
             .align_y(Alignment::Center),
     )
     .padding([8, 12])
+        .height(Length::Fixed(48.0))
     .class(square_tab(false))
     .on_press(Message::AddWatchlist)
     .into()
 }
-pub fn  ticker_list<'a>() -> Element<'a, Message>{
-    todo!()
+pub fn  ticker_list<'a>() -> Element<'a, Message>
+{
+   let text = widget::text::text("Ticker");
+
+    text.into()
 }
 
 
-use cosmic::iced::Background;
-use cosmic::widget::button::Style as ButtonStyle;
+
 
 /// Square tab style. `selected` tints the background and uses the accent color.
 fn square_tab(selected: bool) -> theme::Button {
