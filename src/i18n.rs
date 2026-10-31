@@ -28,16 +28,15 @@ pub fn localizer() -> Box<dyn Localizer> {
 #[folder = "i18n/"]
 struct Localizations;
 
-pub static LANGUAGE_LOADER: LazyLock<FluentLanguageLoader> =
-    LazyLock::new(|| {
-        let loader: FluentLanguageLoader = fluent_language_loader!();
+pub static LANGUAGE_LOADER: LazyLock<FluentLanguageLoader> = LazyLock::new(|| {
+    let loader: FluentLanguageLoader = fluent_language_loader!();
 
-        loader
-            .load_fallback_language(&Localizations)
-            .expect("Error while loading fallback language");
+    loader
+        .load_fallback_language(&Localizations)
+        .expect("Error while loading fallback language");
 
-        loader
-    });
+    loader
+});
 
 /// Request a localized string by ID from the i18n/ directory.
 #[macro_export]
