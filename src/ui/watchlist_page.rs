@@ -18,7 +18,9 @@ pub fn view(
         Some(w) if !w.tickers.is_empty() => w
             .tickers
             .iter()
-            .fold(widget::list_column(), |col, t| col.add(ticker_row(t)))
+            .fold(widget::list_column(), |row_acc, t| {
+                row_acc.add(ticker_row(t))
+            })
             .into_element(),
         _ => widget::text::body("No ticker yet").into(),
     };
@@ -59,16 +61,31 @@ pub fn view(
         .spacing(8)
         .align_y(Alignment::Start);
 
-    let new_list_button = widget::container(new_list_button())
-        .width(Length::Fill) //fill fully then allign to the right/end
+    let edit_list_button =
+        widget::button::icon(widget::icon::from_name("edit-symbolic"))
+            .label("Modify List")
+            .on_press(Message::OpenPage(Page::EditList));
+
+    let new_list_button =
+        widget::button::icon(widget::icon::from_name("list-add-symbolic"))
+            .label("Create List")
+            .on_press(Message::OpenPage(Page::Create));
+
+    let action_row = widget::row::with_capacity(2)
+        .push(edit_list_button)
+        .push(new_list_button)
+        .spacing(8);
+
+    let actions_container = widget::container(action_row)
+        .width(Length::Fill)
         .align_x(Alignment::End)
         .padding([0, 8]);
 
     let tabs = widget::container(header).padding(8).width(Length::Fill);
 
-    let content = widget::column::with_capacity(3)
+    let content = widget::column::with_capacity(4)
         .push(title)
-        .push(new_list_button)
+        .push(actions_container)
         .push(tabs)
         .push(body) // new
         .height(Length::Fixed(600.0));
@@ -101,29 +118,6 @@ pub fn watchlist_button(
     .padding([8, 14])
     .on_press(on_press)
     .into()
-}
-
-pub fn new_list_button<'a>() -> Element<'a, Message> {
-    // widget::button::custom(
-    //     widget::row::with_capacity(2)
-    //         .push(widget::icon::from_name("list-add-symbolic").size(14))
-    //         .push(widget::text::caption("New\nList"))
-    //         .spacing(6)
-    //         .height(Length::Fill)
-    //         .align_y(Alignment::Center),
-    // )
-    // .padding([8, 12])
-    // .height(Length::Fixed(48.0))
-    // // .class(square_tab(false))
-    // .on_press(Message::OpenPage(Page::Manage))
-    // .into()
-
-    let create_button =
-        widget::button::icon(widget::icon::from_name("list-add-symbolic"))
-            .label("Create List")
-            .on_press(Message::OpenPage(Page::Manage));
-
-    create_button.into()
 }
 
 pub fn ticker_row(symbol: &str) -> Element<'_, Message> {

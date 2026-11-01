@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::model::watchlist::Watchlist;
-use crate::ui::{self, watchlist_page};
+use crate::ui::{self, manage_page, watchlist_page};
 use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{
     destroy_popup, get_popup,
@@ -33,6 +33,7 @@ pub struct AppModel {
     selected_list: usize,
     page: Page,
     list_name: String,
+    ticker_input: String,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -47,6 +48,7 @@ pub enum Message {
     CreateWatchlist,
     SelectList(usize),
     NewListNameChanged(String),
+    TickerInputChanged(String),
     AddTicker(String),
     SetRefreshSecs(usize),
 
@@ -58,7 +60,8 @@ pub enum Message {
 pub enum Page {
     #[default]
     Watchlist,
-    Manage,
+    Create,
+    EditList,
 }
 
 /// Create a COSMIC application from the app model
@@ -220,6 +223,7 @@ impl cosmic::Application for AppModel {
             Message::SelectList(i) => self.selected_list = i,
             Message::OpenPage(page) => self.page = page,
             Message::NewListNameChanged(name) => self.list_name = name,
+            Message::TickerInputChanged(text) => self.ticker_input = text,
             Message::AddTicker(symbol) => {
                 let symbol = symbol.trim().to_uppercase();
                 if !symbol.is_empty()
@@ -229,6 +233,7 @@ impl cosmic::Application for AppModel {
                 {
                     list.tickers.push(symbol);
                     self.save_data();
+                    self.ticker_input.clear();
                 }
             }
             Message::SetRefreshSecs(secs) => {
@@ -255,10 +260,14 @@ impl cosmic::Application for AppModel {
 
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let page = match self.page {
-            Page::Manage => ui::manage_page::view(&self.list_name),
+            Page::Create => ui::manage_page::create_view(&self.list_name),
             Page::Watchlist => ui::watchlist_page::view(
                 &self.data.watchlists,
                 self.selected_list,
+            ),
+            Page::EditList => ui::manage_page::edit_list_view(
+                self.data.watchlists.get(self.selected_list),
+                &self.ticker_input,
             ),
         };
 
@@ -280,6 +289,7 @@ impl cosmic::Application for AppModel {
     }
 }
 
+/// write entry is from CosmicConfigEntry
 impl AppModel {
     fn save_data(&self) {
         if let Some(handle) = &self.data_handle
