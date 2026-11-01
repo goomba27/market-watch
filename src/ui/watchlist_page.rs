@@ -1,16 +1,17 @@
 use crate::app::Message;
 use crate::app::Page;
 use crate::model::watchlist::Watchlist;
-use crate::palette;
+
 use cosmic::Element;
-use cosmic::iced::Background;
 use cosmic::iced::{Alignment, Length};
-use cosmic::widget::button::Style as ButtonStyle;
-use cosmic::{theme, widget};
+use cosmic::widget;
 
 const TAB_WIDTH: f32 = 150.0;
 
-pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Message> {
+pub fn view(
+    watchlists: &[Watchlist],
+    selected_list: usize,
+) -> Element<'_, Message> {
     let selected = watchlists.get(selected_list);
 
     let list: Element<Message> = match selected {
@@ -37,10 +38,9 @@ pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Messa
             .iter()
             .enumerate()
             .map(|(i, l)| {
-                widget::container(watchlist_buttons(
+                widget::container(watchlist_button(
                     &l.name,
-                    l.count,
-                    i == selected_list,
+                    l.tickers.len(),
                     Message::SelectList(i),
                 ))
                 .width(Length::Fixed(TAB_WIDTH))
@@ -76,11 +76,16 @@ pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Messa
     content.into()
 }
 
-pub fn watchlist_buttons(name: &str, count: usize, selected: bool, on_press: Message,) -> Element<'_, Message> {
+pub fn watchlist_button(
+    name: &str,
+    count: usize,
+    on_press: Message,
+) -> Element<'_, Message> {
     // label: wraps instead of forcing the button wider
     let label = widget::text::body(name).width(Length::Fill);
 
-    let badge = widget::container(widget::text::caption(count.to_string())).padding([1, 6]);
+    let badge = widget::container(widget::text::caption(count.to_string()))
+        .padding([1, 6]);
 
     // button: share the row equally
     widget::button::custom(
@@ -99,19 +104,26 @@ pub fn watchlist_buttons(name: &str, count: usize, selected: bool, on_press: Mes
 }
 
 pub fn new_list_button<'a>() -> Element<'a, Message> {
-    widget::button::custom(
-        widget::row::with_capacity(2)
-            .push(widget::icon::from_name("list-add-symbolic").size(14))
-            .push(widget::text::caption("New\nList"))
-            .spacing(6)
-            .height(Length::Fill)
-            .align_y(Alignment::Center),
-    )
-    .padding([8, 12])
-    .height(Length::Fixed(48.0))
-    // .class(square_tab(false))
-    .on_press(Message::OpenPage(Page::Manage))
-    .into()
+    // widget::button::custom(
+    //     widget::row::with_capacity(2)
+    //         .push(widget::icon::from_name("list-add-symbolic").size(14))
+    //         .push(widget::text::caption("New\nList"))
+    //         .spacing(6)
+    //         .height(Length::Fill)
+    //         .align_y(Alignment::Center),
+    // )
+    // .padding([8, 12])
+    // .height(Length::Fixed(48.0))
+    // // .class(square_tab(false))
+    // .on_press(Message::OpenPage(Page::Manage))
+    // .into()
+
+    let create_button =
+        widget::button::icon(widget::icon::from_name("list-add-symbolic"))
+            .label("Create List")
+            .on_press(Message::OpenPage(Page::Manage));
+
+    create_button.into()
 }
 
 pub fn ticker_row(symbol: &str) -> Element<'_, Message> {
@@ -120,40 +132,4 @@ pub fn ticker_row(symbol: &str) -> Element<'_, Message> {
         .push(widget::text("--"))
         .align_y(Alignment::Center)
         .into()
-}
-
-/// Square tab style. `selected` tints the background and uses the accent color.
-fn square_tab(selected: bool) -> theme::Button {
-    fn style(_theme: &cosmic::Theme, selected: bool, hover: bool) -> ButtonStyle {
-        let mut s = ButtonStyle::new();
-
-        let bg = if selected {
-            palette::SURFACE_CONTAINER
-        } else if hover {
-            palette::SURFACE_CONTAINER_HIGH
-        } else {
-            palette::with_alpha(palette::SURFACE_CONTAINER, 0.0)
-        };
-        s.background = Some(Background::Color(bg));
-        s.text_color = Some(if selected {
-            palette::PRIMARY
-        } else {
-            palette::ON_SURFACE
-        });
-
-        s.border_width = 1.0;
-        s.border_color = if selected {
-            palette::PRIMARY
-        } else {
-            palette::OUTLINE_VARIANT
-        };
-        s
-    }
-
-    theme::Button::Custom {
-        active: Box::new(move |_focused, t| style(t, selected, false)),
-        hovered: Box::new(move |_focused, t| style(t, selected, true)),
-        pressed: Box::new(move |_focused, t| style(t, selected, true)),
-        disabled: Box::new(move |t| style(t, selected, false)),
-    }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::config::Config;
+use crate::config::{AppData, Config};
 use crate::model::watchlist::Watchlist;
 use crate::ui::{self, watchlist_page};
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
@@ -19,12 +19,19 @@ pub struct AppModel {
     popup: Option<Id>,
     /// Configuration data that persists between application runs.
     config: Config,
-    /// Example row toggler.
-    example_row: bool,
-    example_text: String,
-    watchlists: Vec<Watchlist>,
+
+    /// Config handle for settings (needed to write them).
+    config_handle: Option<cosmic_config::Config>,
+
+    /// Watchlists and anything else the user creates.
+    data: AppData,
+
+    /// Config handle for app data
+    data_handle: Option<cosmic_config::Config>,
+
     selected_list: usize,
     page: Page,
+    list_name: String,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -34,11 +41,13 @@ pub enum Message {
     PopupClosed(Id),
     SubscriptionChannel,
     UpdateConfig(Config),
-    ToggleExampleRow(bool),
 
     //Watchlist
     CreateWatchlist,
     SelectList(usize),
+    NewListNameChanged(String),
+    AddTicker(String),
+    SetRefreshSecs(usize),
 
     //Navigation
     OpenPage(Page),
@@ -72,47 +81,36 @@ impl cosmic::Application for AppModel {
         core: cosmic::Core,
         _flags: Self::Flags,
     ) -> (Self, Task<cosmic::Action<Self::Message>>) {
+        // Settings: ~/.config/cosmic/<APP_ID>/v1/
+        let config_handle =
+            cosmic_config::Config::new(Self::APP_ID, Config::VERSION).ok();
+
+        let config = config_handle
+            .as_ref()
+            .map(|h| Config::get_entry(h).unwrap_or_else(|(_errors, c)| c))
+            .unwrap_or_default();
+
+        // App data: ~/.local/share/cosmic/<APP_ID>/v1/
+        let data_handle = dirs::data_dir().and_then(|dir| {
+            cosmic_config::Config::with_custom_path(
+                Self::APP_ID,
+                AppData::VERSION,
+                dir,
+            )
+            .ok()
+        });
+
+        let data = data_handle
+            .as_ref()
+            .map(|h| AppData::get_entry(h).unwrap_or_else(|(_errors, d)| d))
+            .unwrap_or_default();
+
         let app = AppModel {
-            example_text: String::from("Init Values"),
             core,
-            selected_list: 0,
-            config: cosmic_config::Config::new(Self::APP_ID, Config::VERSION)
-                .map(|context| match Config::get_entry(&context) {
-                    Ok(config) => config,
-                    Err((_errors, config)) => config,
-                })
-                .unwrap_or_default(),
-            watchlists: vec![
-                Watchlist {
-                    name: "List 1".to_string(),
-                    tickers: vec!["NVDA".to_string()],
-                    count: 1,
-                },
-                Watchlist {
-                    name: "List 2".to_string(),
-                    tickers: vec!["NVDA".to_string(), "AMD".to_string()],
-                    count: 2,
-                },
-                Watchlist {
-                    name: "List 3".to_string(),
-                    tickers: vec![
-                        "NVDA".to_string(),
-                        "AMD".to_string(),
-                        "GOOG".to_string(),
-                    ],
-                    count: 3,
-                },
-                Watchlist {
-                    name: "List 4".to_string(),
-                    tickers: vec![
-                        "NVDA".to_string(),
-                        "AMD".to_string(),
-                        "GOOG".to_string(),
-                        "APPL".to_string(),
-                    ],
-                    count: 4,
-                },
-            ],
+            config,
+            config_handle,
+            data,
+            data_handle,
             ..Default::default()
         };
 
@@ -163,10 +161,6 @@ impl cosmic::Application for AppModel {
             Message::UpdateConfig(config) => {
                 self.config = config;
             }
-            Message::ToggleExampleRow(toggled) => {
-                self.example_row = toggled;
-                self.example_text = format!("Toggle is {}", toggled)
-            }
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
                     destroy_popup(p)
@@ -194,9 +188,41 @@ impl cosmic::Application for AppModel {
                     self.popup = None;
                 }
             }
-            Message::CreateWatchlist => todo!(),
+            Message::CreateWatchlist => {
+                let name = self.list_name.trim().to_string();
+                if name.is_empty() {
+                    return Task::none();
+                }
+                self.data.watchlists.push(Watchlist::new(name));
+                self.save_data();
+                self.selected_list = self.data.watchlists.len() - 1;
+                self.list_name.clear();
+                self.page = Page::Watchlist;
+            }
             Message::SelectList(i) => self.selected_list = i,
             Message::OpenPage(page) => self.page = page,
+            Message::NewListNameChanged(name) => self.list_name = name,
+            Message::AddTicker(symbol) => {
+                let symbol = symbol.trim().to_uppercase();
+                if let Some(list) =
+                    self.data.watchlists.get_mut(self.selected_list)
+                {
+                    if !symbol.is_empty() && !list.tickers.contains(&symbol) {
+                        list.tickers.push(symbol);
+                        self.save_data();
+                    }
+                }
+            }
+            Message::SetRefreshSecs(secs) => {
+                if let Some(handle) = &self.config_handle {
+                    let mut settings = self.config.settings.clone();
+                    settings.refresh_secs = secs;
+                    if let Err(err) = self.config.set_settings(handle, settings)
+                    {
+                        eprintln!("failed to save settings: {err}");
+                    }
+                }
+            }
         }
         Task::none()
     }
@@ -211,10 +237,11 @@ impl cosmic::Application for AppModel {
 
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let page = match self.page {
-            Page::Manage => ui::manage_page::view(),
-            Page::Watchlist => {
-                ui::watchlist_page::view(&self.watchlists, self.selected_list)
-            }
+            Page::Manage => ui::manage_page::view(&self.list_name),
+            Page::Watchlist => ui::watchlist_page::view(
+                &self.data.watchlists,
+                self.selected_list,
+            ),
         };
 
         self.core
@@ -232,5 +259,15 @@ impl cosmic::Application for AppModel {
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
+    }
+}
+
+impl AppModel {
+    fn save_data(&self) {
+        if let Some(handle) = &self.data_handle {
+            if let Err(err) = self.data.write_entry(handle) {
+                eprintln!("failed to save the app data: {err}");
+            }
+        }
     }
 }

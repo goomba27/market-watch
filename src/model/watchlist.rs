@@ -1,12 +1,16 @@
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Watchlist {
     pub name: String,
     pub tickers: Vec<String>,
-    pub count: usize,
 }
 
 impl Watchlist {
     pub fn new(name: String) -> Self {
-        todo!()
+        Self {
+            name,
+            tickers: Vec::new(),
+        }
     }
 }
