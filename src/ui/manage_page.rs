@@ -1,11 +1,8 @@
 use crate::app::{Message, Page};
 use crate::model::watchlist::Watchlist;
 use cosmic::Element;
-use cosmic::iced::core::widget::operation::Scrollable;
 use cosmic::iced::{Alignment, Length};
-use cosmic::theme::spacing;
 use cosmic::widget;
-use dirs::public_dir;
 
 pub fn create_view<'a>(list_name: &'a str) -> Element<'a, Message> {
     let save_list_button = widget::container(
