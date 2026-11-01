@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::config::{AppData, Config};
 use crate::model::watchlist::Watchlist;
 use crate::ui::{self, watchlist_page};
-use cosmic::cosmic_config::{self, CosmicConfigEntry};
+use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{
     destroy_popup, get_popup,
 };
 use cosmic::iced::{Limits, Subscription, futures, window::Id};
 use cosmic::prelude::*;
 use futures::SinkExt;
+
+use crate::config::{AppData, Config, Settings};
 
 #[derive(Default)]
 pub struct AppModel {
@@ -85,10 +86,27 @@ impl cosmic::Application for AppModel {
         let config_handle =
             cosmic_config::Config::new(Self::APP_ID, Config::VERSION).ok();
 
-        let config = config_handle
-            .as_ref()
-            .map(|h| Config::get_entry(h).unwrap_or_else(|(_errors, c)| c))
-            .unwrap_or_default();
+        let config = match &config_handle {
+            Some(h) => match Config::get_entry(h) {
+                Ok(config) => {
+                    //first run: nothing on disk, write defaults
+                    if matches!(
+                        h.get_local::<Settings>("settings"),
+                        Err(cosmic_config::Error::NotFound)
+                    ) && let Err(err) = config.write_entry(h)
+                    {
+                        eprintln!("failed to write default settings: {err}");
+                    }
+                    config
+                }
+                // File exists but can't be read: use defaults, don't overwrite it.
+                Err((errors, config)) => {
+                    eprintln!("failed to load settings: {errors:?}");
+                    config
+                }
+            },
+            None => Config::default(),
+        };
 
         // App data: ~/.local/share/cosmic/<APP_ID>/v1/
         let data_handle = dirs::data_dir().and_then(|dir| {
@@ -204,13 +222,13 @@ impl cosmic::Application for AppModel {
             Message::NewListNameChanged(name) => self.list_name = name,
             Message::AddTicker(symbol) => {
                 let symbol = symbol.trim().to_uppercase();
-                if let Some(list) =
-                    self.data.watchlists.get_mut(self.selected_list)
+                if !symbol.is_empty()
+                    && let Some(list) =
+                        self.data.watchlists.get_mut(self.selected_list)
+                    && !list.tickers.contains(&symbol)
                 {
-                    if !symbol.is_empty() && !list.tickers.contains(&symbol) {
-                        list.tickers.push(symbol);
-                        self.save_data();
-                    }
+                    list.tickers.push(symbol);
+                    self.save_data();
                 }
             }
             Message::SetRefreshSecs(secs) => {
@@ -264,10 +282,10 @@ impl cosmic::Application for AppModel {
 
 impl AppModel {
     fn save_data(&self) {
-        if let Some(handle) = &self.data_handle {
-            if let Err(err) = self.data.write_entry(handle) {
-                eprintln!("failed to save the app data: {err}");
-            }
+        if let Some(handle) = &self.data_handle
+            && let Err(err) = self.data.write_entry(handle)
+        {
+            eprintln!("failed to save the app data: {err}");
         }
     }
 }
