@@ -14,10 +14,12 @@ Line numbers last checked on 2026-11-01, after adding delete-symbol.
 
 ## Cleanup
 
-- [ ] **Remove the remaining template leftovers:** the `SubscriptionChannel` message and its `update` arm (`src/app.rs:44, 180`), and the demo `Subscription::run` channel with `struct MySubscription` (`src/app.rs:147-159`). Keep the `watch_config` subscription.
-- [ ] **Share the popup size.** `600.0` is hard-coded in `update` (`src/app.rs:201-203`), `view_window` (`src/app.rs:296-299`), `watchlist_page.rs:91` and `manage_page.rs:39, 102`. Add one `const`, for example next to `TAB_WIDTH`.
-- [ ] **Clear the dead-code warnings** (16 at last `cargo clippy`): every `palette.rs` constant plus `hex` and `with_alpha` are unused, left over from commenting out the custom styling. Delete them, or use them if you restore the styling (see the design decision below).
-- [ ] **Optional: use a `for` loop in `watchlist_page.rs` too** (`src/ui/watchlist_page.rs:41`). It still uses `fold`, while the edit page now uses a loop. Switching keeps both pages consistent.
+- [ ] **Fix the `globals.rs` doc comment.** It still says "Colors from the Apex Market Terminal design", but the file now holds only layout constants (`src/globals.rs:1-2`).
+- [x] **Shared the popup size.** `globals::POPUP_WIDTH` and `globals::POPUP_HEIGHT` replace every hard-coded `600.0` in `app.rs` (`update` and `view_window`), `watchlist_page.rs` and `manage_page.rs`.
+- [x] **Cleared the dead-code warnings.** The unused colour constants, `hex` and `with_alpha` are deleted along with `palette.rs`. The only Clippy warning left is `SetRefreshSecs` (see Settings UI below).
+- [x] **Removed the template subscription leftovers:** the `SubscriptionChannel` message and its `update` arm, the demo `Subscription::run` channel, `struct MySubscription`, and the `futures`/`SinkExt` imports. The `watch_config` subscription stays.
+- [x] **Used a `for` loop in `watchlist_page.rs` too**, matching the edit page.
+- [x] **Moved `TAB_WIDTH` into `src/globals.rs`** next to the new popup size constants.
 - [x] **Removed unused imports** in `src/app.rs` (`manage_page`, `watchlist_page`) and `src/ui/manage_page.rs` (`Scrollable`, `spacing`, `public_dir`).
 - [x] **Fixed the misplaced doc comment.** It's now a `//` comment inside `save_data`, next to `write_entry`.
 - [x] **Fixed the `with_capacity` hint.** `watchlist_page.rs:86` now says `4`, matching its 4 pushes.
@@ -25,10 +27,10 @@ Line numbers last checked on 2026-11-01, after adding delete-symbol.
 
 ## Features
 
-- [ ] **Grey out Modify List when there are no lists.** Use `.on_press_maybe(has_lists.then_some(..))` (`src/ui/watchlist_page.rs:17-20`). This is the lesson 0008 exercise. The edit page already handles `None` safely, so this is about UX, not a crash.
+- [ ] **Grey out Modify List when there are no lists.** Use `.on_press_maybe(has_lists.then_some(..))` (`src/ui/watchlist_page.rs:17-19`). This is the lesson 0008 exercise. The edit page already handles `None` safely, so this is about UX, not a crash.
 - [ ] **Settings UI.** `Message::SetRefreshSecs` is handled in `update` but nothing sends it yet (Clippy: "never constructed").
 - [x] **Remove a symbol from a list.** `RemoveTicker(usize)` with a bounds check and save (`src/app.rs`), and a trash button on each row of the edit page (`editable_row` in `src/ui/manage_page.rs`). Built from lesson 0010.
 
 ## Design decision
 
-- [ ] **No selected-tab indicator.** The active watchlist tab looks the same as the others, and `watchlist_button` (`src/ui/watchlist_page.rs:96`) has no `selected` parameter. Decide whether to use a stock style (`widget::button::suggested` for the selected tab, `standard` for the others) or restore the custom `palette.rs` styling.
+- [ ] **No selected-tab indicator.** The active watchlist tab looks the same as the others, and `watchlist_button` (`src/ui/watchlist_page.rs:95`) has no `selected` parameter. Decide whether to use a stock style (`widget::button::suggested` for the selected tab, `standard` for the others) or restore the custom colour styling (deleted; the colours are still in git history as `src/palette.rs`, for example `git show 3e58f02:src/palette.rs`).

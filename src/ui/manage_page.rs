@@ -1,4 +1,5 @@
 use crate::app::{Message, Page};
+use crate::globals;
 use crate::model::watchlist::Watchlist;
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
@@ -36,7 +37,7 @@ pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
         .spacing(12)
         .padding(16)
         .width(Length::Fill)
-        .height(Length::Fixed(600.0))
+        .height(Length::Fixed(globals::POPUP_HEIGHT))
         .into()
 }
 
@@ -99,7 +100,7 @@ pub fn edit_list_view<'a>(
         .spacing(12)
         .padding(16)
         .width(Length::Fill)
-        .height(Length::Fixed(600.0))
+        .height(Length::Fixed(globals::POPUP_HEIGHT))
         .into()
 }
 

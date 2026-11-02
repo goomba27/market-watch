@@ -1,12 +1,11 @@
 use crate::app::Message;
 use crate::app::Page;
+use crate::globals;
 use crate::model::watchlist::Watchlist;
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
-
-const TAB_WIDTH: f32 = 150.0;
 
 pub fn view(
     watchlists: &[Watchlist],
@@ -35,13 +34,13 @@ pub fn view(
         .padding([0, 8]);
 
     let list: Element<Message> = match selected {
-        Some(w) if !w.tickers.is_empty() => w
-            .tickers
-            .iter()
-            .fold(widget::list_column(), |row_acc, t| {
-                row_acc.add(ticker_row(t))
-            })
-            .into_element(),
+        Some(w) if !w.tickers.is_empty() => {
+            let mut row_acc = widget::list_column();
+            for t in &w.tickers {
+                row_acc = row_acc.add(ticker_row(t));
+            }
+            row_acc.into_element()
+        }
         _ => widget::text::body("No ticker yet").into(),
     };
 
@@ -65,7 +64,7 @@ pub fn view(
                     l.tickers.len(),
                     Message::SelectList(i),
                 ))
-                .width(Length::Fixed(TAB_WIDTH))
+                .width(Length::Fixed(globals::TAB_WIDTH))
                 .into()
             })
             .collect::<Vec<_>>(),
@@ -88,7 +87,7 @@ pub fn view(
         .push(actions_container)
         .push(tabs)
         .push(body) // new
-        .height(Length::Fixed(600.0));
+        .height(Length::Fixed(globals::POPUP_HEIGHT));
 
     content.into()
 }

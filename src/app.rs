@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::model::watchlist::Watchlist;
+use crate::globals;
 use crate::ui;
 use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{
     destroy_popup, get_popup,
 };
-use cosmic::iced::{Limits, Subscription, futures, window::Id};
+use cosmic::iced::{Limits, Subscription, window::Id};
 use cosmic::prelude::*;
-use futures::SinkExt;
 
 use crate::config::{AppData, Config, Settings};
 
@@ -41,7 +41,6 @@ pub struct AppModel {
 pub enum Message {
     TogglePopup,
     PopupClosed(Id),
-    SubscriptionChannel,
     UpdateConfig(Config),
 
     //Watchlist
@@ -144,20 +143,7 @@ impl cosmic::Application for AppModel {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        struct MySubscription;
-
         Subscription::batch(vec![
-            // Create a subscription which emits updates through a channel.
-            Subscription::run(|| {
-                cosmic::iced::stream::channel(
-                    4,
-                    move |mut channel: futures::channel::mpsc::Sender<_>| async move {
-                        _ = channel.send(Message::SubscriptionChannel).await;
-
-                        futures::future::pending().await
-                    },
-                )
-            }),
             // Watch for application configuration changes.
             self.core()
                 .watch_config::<Config>(Self::APP_ID)
@@ -177,9 +163,6 @@ impl cosmic::Application for AppModel {
         message: Self::Message,
     ) -> Task<cosmic::Action<Self::Message>> {
         match message {
-            Message::SubscriptionChannel => {
-                // For example purposes only.
-            }
             Message::UpdateConfig(config) => {
                 self.config = config;
             }
@@ -198,10 +181,10 @@ impl cosmic::Application for AppModel {
                             None,
                         );
                     popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(600.0)
-                        .min_width(600.0)
-                        .min_height(600.0)
-                        .max_height(1080.0);
+                        .max_width(globals::POPUP_WIDTH)
+                        .min_width(globals::POPUP_WIDTH)
+                        .min_height(globals::POPUP_HEIGHT)
+                        .max_height(globals::POPUP_HEIGHT);
                     get_popup(popup_settings)
                 };
             }
@@ -293,10 +276,10 @@ impl cosmic::Application for AppModel {
             .popup_container(page)
             .limits(
                 Limits::NONE
-                    .min_width(600.0)
-                    .max_width(600.0)
-                    .min_height(600.0)
-                    .max_height(600.0),
+                    .min_width(globals::POPUP_WIDTH)
+                    .max_width(globals::POPUP_WIDTH)
+                    .min_height(globals::POPUP_HEIGHT)
+                    .max_height(globals::POPUP_HEIGHT),
             )
             .into()
     }
