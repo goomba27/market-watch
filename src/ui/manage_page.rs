@@ -4,7 +4,7 @@ use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
 
-pub fn create_view<'a>(list_name: &'a str) -> Element<'a, Message> {
+pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
     let save_list_button = widget::container(
         widget::button::icon(widget::icon::from_name(
             "document-save-as-symbolic",
@@ -73,19 +73,20 @@ pub fn edit_list_view<'a>(
         .spacing(8)
         .align_y(Alignment::Center);
 
-    // iter and get existing symbols and genrate row
+    // iter and get existing symbols and generate rows
+    // add the delete button
     let symbols: Element<Message> = if list.tickers.is_empty() {
         widget::text::body("No symbols yet").into()
     } else {
         let mut row_acc = widget::list_column();
-        for t in &list.tickers {
-            row_acc = row_acc.add(widget::text::body(t.as_str()));
+        for (idx, t) in list.tickers.iter().enumerate() {
+            row_acc = row_acc.add(editable_row(idx, t));
         }
         row_acc.into_element()
     };
 
     //put symbols in a scrall
-    let scrallable = widget::container(widget::scrollable::vertical(symbols))
+    let scrollable = widget::container(widget::scrollable::vertical(symbols))
         .width(Length::Fill)
         .height(Length::Fill);
 
@@ -94,7 +95,7 @@ pub fn edit_list_view<'a>(
         .push(back_button())
         .push(title)
         .push(add_row)
-        .push(scrallable)
+        .push(scrollable)
         .spacing(12)
         .padding(16)
         .width(Length::Fill)
@@ -106,5 +107,25 @@ pub fn back_button<'a>() -> Element<'a, Message> {
     widget::button::icon(widget::icon::from_name("go-previous-symbolic"))
         .label("Back")
         .on_press(Message::OpenPage(Page::Watchlist))
+        .into()
+}
+
+fn editable_row<'a>(index: usize, ticker: &'a str) -> Element<'a, Message> {
+    let trash =
+        widget::button::icon(widget::icon::from_name("edit-delete-symbolic"))
+            .extra_small()
+            .on_press(Message::RemoveTicker(index));
+
+    let trash_container = widget::container(trash)
+        .width(Length::Fill)
+        .align_x(Alignment::End);
+
+    let text = widget::text::body(ticker);
+
+    widget::row::with_capacity(2)
+        .push(text)
+        .push(trash_container)
+        // trash can is not the same height as the text, so center them
+        .align_y(Alignment::Center)
         .into()
 }

@@ -14,6 +14,26 @@ pub fn view(
 ) -> Element<'_, Message> {
     let selected = watchlists.get(selected_list);
 
+    let edit_list_button =
+        widget::button::icon(widget::icon::from_name("edit-symbolic"))
+            .label("Modify List")
+            .on_press(Message::OpenPage(Page::EditList));
+
+    let new_list_button =
+        widget::button::icon(widget::icon::from_name("list-add-symbolic"))
+            .label("Create List")
+            .on_press(Message::OpenPage(Page::Create));
+
+    let action_row = widget::row::with_capacity(2)
+        .push(edit_list_button)
+        .push(new_list_button)
+        .spacing(8);
+
+    let actions_container = widget::container(action_row)
+        .width(Length::Fill)
+        .align_x(Alignment::End)
+        .padding([0, 8]);
+
     let list: Element<Message> = match selected {
         Some(w) if !w.tickers.is_empty() => w
             .tickers
@@ -60,26 +80,6 @@ pub fn view(
         .push(scroller)
         .spacing(8)
         .align_y(Alignment::Start);
-
-    let edit_list_button =
-        widget::button::icon(widget::icon::from_name("edit-symbolic"))
-            .label("Modify List")
-            .on_press(Message::OpenPage(Page::EditList));
-
-    let new_list_button =
-        widget::button::icon(widget::icon::from_name("list-add-symbolic"))
-            .label("Create List")
-            .on_press(Message::OpenPage(Page::Create));
-
-    let action_row = widget::row::with_capacity(2)
-        .push(edit_list_button)
-        .push(new_list_button)
-        .spacing(8);
-
-    let actions_container = widget::container(action_row)
-        .width(Length::Fill)
-        .align_x(Alignment::End)
-        .padding([0, 8]);
 
     let tabs = widget::container(header).padding(8).width(Length::Fill);
 

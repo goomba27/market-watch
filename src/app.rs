@@ -51,6 +51,7 @@ pub enum Message {
     TickerInputChanged(String),
     AddTicker(String),
     SetRefreshSecs(usize),
+    RemoveTicker(usize),
 
     //Navigation
     OpenPage(Page),
@@ -236,6 +237,20 @@ impl cosmic::Application for AppModel {
                     self.ticker_input.clear();
                 }
             }
+            Message::RemoveTicker(index) => {
+                if let Some(list) =
+                    self.data.watchlists.get_mut(self.selected_list)
+                    && index < list.tickers.len()
+                {
+                    list.tickers.remove(index);
+                    self.save_data();
+                } else {
+                    eprintln!(
+                        "RemoveTicker({index}): no symbol at that position in list {}",
+                        self.selected_list
+                    );
+                }
+            }
             Message::SetRefreshSecs(secs) => {
                 if let Some(handle) = &self.config_handle {
                     let mut settings = self.config.settings.clone();
@@ -260,7 +275,9 @@ impl cosmic::Application for AppModel {
 
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let page = match self.page {
-            Page::Create => ui::manage_page::create_view(&self.list_name),
+            Page::Create => {
+                ui::manage_page::create_new_list_view(&self.list_name)
+            }
             Page::Watchlist => ui::watchlist_page::view(
                 &self.data.watchlists,
                 self.selected_list,
