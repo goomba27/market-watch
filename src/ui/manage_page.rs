@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 use crate::app::Message;
 use crate::model::watchlist::Watchlist;
 use crate::ui::common::{generate_ticker_list, page_layout};

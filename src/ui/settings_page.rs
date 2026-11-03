@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 use crate::app::Message;
 use crate::config::Settings;
 use crate::globals;

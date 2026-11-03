@@ -6,9 +6,9 @@
   <name>Market Watch</name>
   <summary>An application for the COSMIC™ desktop</summary>
   <icon type="remote" width="64" height="64" scale="1">
-    https://github.com/pop-os/cosmic-app-template/raw/main/resources/icons/hicolor/scalable/apps/icon.svg
+    https://github.com/goomba27/market-watch/raw/main/resources/icon.svg
   </icon>
-  <url type="vcs-browser">https://github.com/pop-os/cosmic-app-template</url>
+  <url type="vcs-browser">https://github.com/goomba27/market-watch</url>
   <launchable type="desktop-id">com.github.goomba27.market-watch.desktop</launchable>
   <provides>
     <id>com.system76.CosmicApplet</id>

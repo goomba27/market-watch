@@ -1,6 +1,11 @@
 # Market Watch
 
-An application for the COSMIC™ desktop
+A stock watchlist applet for the COSMIC™ desktop. Group ticker symbols into watchlists and check their prices from the panel (prices not yet implemented).
+
+I am building this after finishing the Rust book, as a next step. Writing an app with libcosmic is a good way to learn the toolkit, and fetching live prices from the Massive API is a good way to try async and HTTP in Rust.
+
+> [!NOTE]
+> This is still a work in progress.
 
 ## Installation
 

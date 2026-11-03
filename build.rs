@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 use std::{env, fs, path::Path};
 use xdgen::{App, Context, FluentString};
 
