@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::app::Message;
-use crate::app::Page;
+use crate::app::{Message, Page};
 use crate::globals;
 use crate::model::watchlist::Watchlist;
-use crate::ui::common::build_header;
-use crate::ui::common::generate_ticker_list;
-use crate::ui::common::page_layout;
+use crate::ui::common::{generate_ticker_list, page_layout};
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
@@ -47,6 +44,7 @@ pub fn view(
                 widget::container(watchlist_button(
                     &l.name,
                     l.tickers.len(),
+                    i == selected_list,
                     Message::SelectList(i),
                 ))
                 .width(Length::Fixed(globals::TAB_WIDTH))
@@ -72,8 +70,7 @@ pub fn view(
     let content = widget::column::with_capacity(3)
         .push(actions_container)
         .push(tabs)
-        .push(body)
-        .height(Length::Fixed(globals::POPUP_HEIGHT));
+        .push(body);
 
     page_layout("Market Watch", content)
 }
@@ -81,6 +78,7 @@ pub fn view(
 pub fn watchlist_button(
     name: &str,
     count: usize,
+    selected: bool,
     on_press: Message,
 ) -> Element<'_, Message> {
     // label: wraps instead of forcing the button wider
@@ -88,6 +86,12 @@ pub fn watchlist_button(
 
     let badge = widget::container(widget::text::caption(count.to_string()))
         .padding([1, 6]);
+
+    let style = if selected {
+        cosmic::theme::Button::Suggested
+    } else {
+        cosmic::theme::Button::Standard
+    };
 
     // button: share the row equally
     widget::button::custom(
@@ -98,6 +102,7 @@ pub fn watchlist_button(
             .align_y(Alignment::Center)
             .height(Length::Fill),
     )
+    .class(style)
     .width(Length::Fill)
     .height(Length::Fixed(48.0))
     .padding([8, 14])
