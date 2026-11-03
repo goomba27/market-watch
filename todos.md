@@ -14,12 +14,12 @@ Line numbers last checked on 2026-11-01, after adding delete-symbol.
 
 ## Cleanup
 
-- [ ] **Fix the `globals.rs` doc comment.** It still says "Colors from the Apex Market Terminal design", but the file now holds only layout constants (`src/globals.rs:1-2`).
 - [ ] **Hide header buttons that go nowhere.** `build_header` (`src/ui/common.rs:12`) shows Back and Settings on every page, so the Watchlist page has a Back button to itself and the Settings page has a Settings button to itself. Add `show_back: bool` and `show_settings: bool` parameters and skip each button when false (`.push_maybe(show_back.then(back_button))` or an `if`). Also fix the "black" typo in the TODO comment at `common.rs:8`.
 - [ ] **Centre the header title.** The title is `Fill` with `align_x(Center)`, so it centres in the space left between the buttons, not across the popup. "Back" and "Settings" have different widths, so it sits off centre, and it'll shift more once one button is hidden. Fix it by putting the same width on both side slots, or an empty space on the side that has no button.
-- [ ] **Use one side inset on every page.** The header uses `.padding(16)`, the edit page's `add_row` uses 12, the symbol list and action buttons use 8, and the Create page's name field has none, so it touches the popup edge. Pick one (for example 16) and use it everywhere, or set it once on each page's outer column.
+- [x] **Used one side inset on every page.** `globals::INSET` (16) is used by the header, and `common::page_layout` puts every page's content below the header with the same left and right inset. Widgets inside a page keep only their top and bottom padding.
+- [x] **Fixed the `globals.rs` doc comment.** The stale "Colors from the Apex Market Terminal design" comment is gone; the file holds only layout constants and `REFRESH_CHOICES`.
 - [x] **Shared the popup size.** `globals::POPUP_WIDTH` and `globals::POPUP_HEIGHT` replace every hard-coded `600.0` in `app.rs` (`update` and `view_window`), `watchlist_page.rs` and `manage_page.rs`.
-- [x] **Cleared the dead-code warnings.** The unused colour constants, `hex` and `with_alpha` are deleted along with `palette.rs`. The only Clippy warning left is `SetRefreshSecs` (see Settings UI below).
+- [x] **Cleared the dead-code warnings.** The unused colour constants, `hex` and `with_alpha` are deleted along with `palette.rs`. Clippy is now clean (no warnings).
 - [x] **Removed the template subscription leftovers:** the `SubscriptionChannel` message and its `update` arm, the demo `Subscription::run` channel, `struct MySubscription`, and the `futures`/`SinkExt` imports. The `watch_config` subscription stays.
 - [x] **Used a `for` loop in `watchlist_page.rs` too**, matching the edit page.
 - [x] **Moved `TAB_WIDTH` into `src/globals.rs`** next to the new popup size constants.
@@ -31,8 +31,8 @@ Line numbers last checked on 2026-11-01, after adding delete-symbol.
 ## Features
 
 - [ ] **Grey out Modify List when there are no lists.** Use `.on_press_maybe(has_lists.then_some(..))` (`src/ui/watchlist_page.rs:17-19`). This is the lesson 0008 exercise. The edit page already handles `None` safely, so this is about UX, not a crash.
-- [ ] **Settings UI.** `Message::SetRefreshSecs` is handled in `update` but nothing sends it yet (Clippy: "never constructed").
-- [x] **Remove a symbol from a list.** `RemoveTicker(usize)` with a bounds check and save (`src/app.rs`), and a trash button on each row of the edit page (`editable_row` in `src/ui/manage_page.rs`). Built from lesson 0010.
+- [x] **Settings UI.** `src/ui/settings_page.rs` has a Massive API key field (`secure_input` with show/hide, Save enabled only when the key changed) and refresh buttons for `globals::REFRESH_CHOICES` that send `SetRefreshSecs`, with the current choice highlighted. Both save through `AppModel::save_settings`.
+- [x] **Remove a symbol from a list.** `RemoveTicker(String)` removes the symbol with `retain` and saves only if something was removed (`src/app.rs`), and a trash button on each row of the edit page (`editable_row` in `src/ui/manage_page.rs`). Built from lesson 0010.
 
 ## Design decision
 

@@ -31,7 +31,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            refresh_secs: 60,
+            refresh_secs: 1800,
             show_change_percent: false,
             api_key: String::new(),
         }

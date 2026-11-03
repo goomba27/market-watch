@@ -4,6 +4,7 @@ use crate::globals;
 use crate::model::watchlist::Watchlist;
 use crate::ui::common::build_header;
 use crate::ui::common::generate_ticker_list;
+use crate::ui::common::page_layout;
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
@@ -32,8 +33,7 @@ pub fn view(
 
     let actions_container = widget::container(action_row)
         .width(Length::Fill)
-        .align_x(Alignment::End)
-        .padding([0, 8]);
+        .align_x(Alignment::End);
 
     let body = generate_ticker_list(selected, false);
 
@@ -64,17 +64,16 @@ pub fn view(
         .align_y(Alignment::Start);
 
     let tabs = widget::container(watchlist_tabs)
-        .padding(8)
+        .padding([8, 0])
         .width(Length::Fill);
 
-    let content = widget::column::with_capacity(4)
-        .push(build_header("Market Watch"))
+    let content = widget::column::with_capacity(3)
         .push(actions_container)
         .push(tabs)
         .push(body)
         .height(Length::Fixed(globals::POPUP_HEIGHT));
 
-    content.into()
+    page_layout("Market Watch", content)
 }
 
 pub fn watchlist_button(

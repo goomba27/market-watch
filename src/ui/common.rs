@@ -1,3 +1,4 @@
+use crate::globals;
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
@@ -8,7 +9,7 @@ use crate::model::watchlist::Watchlist;
 //TODO: add param to not display black on watchlist page show_back: bool
 //TODO: add param to not display settings on settings page show_settings: bool
 //TODO: title is off center
-//TODO: Inset is not the same on all pages
+
 pub fn build_header<'a>(page_title: &'a str) -> Element<'a, Message> {
     let title = widget::container(widget::text::title2(page_title))
         .width(Length::Fill) //this two are needed for centered text with the container
@@ -27,7 +28,7 @@ pub fn build_header<'a>(page_title: &'a str) -> Element<'a, Message> {
         .align_y(Alignment::Center)
         .width(Length::Fill)
         .spacing(12)
-        .padding(16)
+        .padding(globals::INSET)
         .into()
 }
 
@@ -59,7 +60,7 @@ pub fn generate_ticker_list<'a>(
     };
 
     widget::container(widget::scrollable::vertical(list))
-        .padding(8)
+        .padding([8, 0])
         .width(Length::Fill)
         .height(Length::Fill)
         .into()
@@ -91,5 +92,23 @@ fn editable_row<'a>(ticker: &'a str) -> Element<'a, Message> {
         // trash can is not the same height as the text, so center them
         .align_y(Alignment::Center)
         .spacing(8)
+        .into()
+}
+
+/// Header + content with the same side inset on every page.
+pub fn page_layout<'a>(
+    title: &'a str,
+    content: impl Into<Element<'a, Message>>,
+) -> Element<'a, Message> {
+    let body = widget::container(content)
+        .padding([0, globals::INSET])
+        .width(Length::Fill)
+        .height(Length::Fill);
+
+    widget::column::with_capacity(2)
+        .push(build_header(title))
+        .push(body)
+        .width(Length::Fill)
+        .height(Length::Fixed(globals::POPUP_HEIGHT))
         .into()
 }

@@ -1,7 +1,6 @@
 use crate::app::Message;
-use crate::globals;
 use crate::model::watchlist::Watchlist;
-use crate::ui::common::{build_header, generate_ticker_list};
+use crate::ui::common::{generate_ticker_list, page_layout};
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
@@ -15,20 +14,18 @@ pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
         .on_press(Message::CreateWatchlist),
     )
     .width(Length::Fill)
-    .align_x(Alignment::End)
-    .padding([0, 8]);
+    .align_x(Alignment::End);
 
     let name_field = widget::text_input("List name", list_name)
         .on_input(Message::NewListNameChanged)
         .width(Length::Fill);
 
-    widget::column::with_capacity(3)
-        .push(build_header("Create List"))
+    let content = widget::column::with_capacity(2)
         .push(save_list_button)
         .push(name_field)
-        .width(Length::Fill)
-        .height(Length::Fixed(globals::POPUP_HEIGHT))
-        .into()
+        .spacing(8);
+
+    page_layout("Create List", content)
 }
 
 pub fn edit_list_view<'a>(
@@ -37,15 +34,11 @@ pub fn edit_list_view<'a>(
 ) -> Element<'a, Message> {
     //No list yet
     if list.is_none() {
-        return widget::column::with_capacity(2)
-            .push(build_header("Edit List"))
-            .push(
-                widget::container(widget::text::body("Create a list first"))
-                    .padding(16),
-            )
-            .width(Length::Fill)
-            .height(Length::Fixed(globals::POPUP_HEIGHT))
-            .into();
+        return page_layout(
+            "Edit List",
+            widget::container(widget::text::body("Create a list first"))
+                .padding([16, 0]),
+        );
     }
 
     let symbol_field = widget::text_input("Symbol, e.g AAPL", ticker_input)
@@ -62,17 +55,12 @@ pub fn edit_list_view<'a>(
         .push(symbol_field)
         .push(add_button)
         .spacing(8)
-        .padding(12)
+        .padding([12, 0])
         .align_y(Alignment::Center);
 
     let body = generate_ticker_list(list, true);
 
-    // puts everything together
-    widget::column::with_capacity(4)
-        .push(build_header("Edit List"))
-        .push(add_row)
-        .push(body)
-        .width(Length::Fill)
-        .height(Length::Fixed(globals::POPUP_HEIGHT))
-        .into()
+    let content = widget::column::with_capacity(2).push(add_row).push(body);
+
+    page_layout("Edit List", content)
 }
