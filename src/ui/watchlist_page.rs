@@ -2,6 +2,8 @@ use crate::app::Message;
 use crate::app::Page;
 use crate::globals;
 use crate::model::watchlist::Watchlist;
+use crate::ui::common::build_header;
+use crate::ui::common::generate_ticker_list;
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
@@ -33,26 +35,7 @@ pub fn view(
         .align_x(Alignment::End)
         .padding([0, 8]);
 
-    let list: Element<Message> = match selected {
-        Some(w) if !w.tickers.is_empty() => {
-            let mut row_acc = widget::list_column();
-            for t in &w.tickers {
-                row_acc = row_acc.add(ticker_row(t));
-            }
-            row_acc.into_element()
-        }
-        _ => widget::text::body("No ticker yet").into(),
-    };
-
-    let body = widget::container(widget::scrollable::vertical(list))
-        .padding(8)
-        .width(Length::Fill)
-        .height(Length::Fill);
-
-    let title = widget::container(widget::text::title2("Market Watch"))
-        .padding(8)
-        .width(Length::Fill)
-        .align_x(Alignment::Center);
+    let body = generate_ticker_list(selected, false);
 
     let tab_row = widget::row::with_children(
         watchlists
@@ -75,18 +58,20 @@ pub fn view(
 
     let scroller = widget::scrollable::horizontal(tab_row).width(Length::Fill);
 
-    let header = widget::row::with_capacity(2)
+    let watchlist_tabs = widget::row::with_capacity(2)
         .push(scroller)
         .spacing(8)
         .align_y(Alignment::Start);
 
-    let tabs = widget::container(header).padding(8).width(Length::Fill);
+    let tabs = widget::container(watchlist_tabs)
+        .padding(8)
+        .width(Length::Fill);
 
     let content = widget::column::with_capacity(4)
-        .push(title)
+        .push(build_header("Market Watch"))
         .push(actions_container)
         .push(tabs)
-        .push(body) // new
+        .push(body)
         .height(Length::Fixed(globals::POPUP_HEIGHT));
 
     content.into()
@@ -117,12 +102,4 @@ pub fn watchlist_button(
     .padding([8, 14])
     .on_press(on_press)
     .into()
-}
-
-pub fn ticker_row(symbol: &str) -> Element<'_, Message> {
-    widget::row::with_capacity(2)
-        .push(widget::text::body(symbol).width(Length::Fill))
-        .push(widget::text("--"))
-        .align_y(Alignment::Center)
-        .into()
 }

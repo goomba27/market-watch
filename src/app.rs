@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::model::watchlist::Watchlist;
 use crate::globals;
+use crate::model::watchlist::Watchlist;
 use crate::ui;
 use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{
@@ -50,7 +50,7 @@ pub enum Message {
     TickerInputChanged(String),
     AddTicker(String),
     SetRefreshSecs(usize),
-    RemoveTicker(usize),
+    RemoveTicker(String),
 
     //Navigation
     OpenPage(Page),
@@ -62,6 +62,7 @@ pub enum Page {
     Watchlist,
     Create,
     EditList,
+    Settings,
 }
 
 /// Create a COSMIC application from the app model
@@ -151,7 +152,6 @@ impl cosmic::Application for AppModel {
                     // for why in update.errors {
                     //     tracing::error!(?why, "app config error");
                     // }
-
                     Message::UpdateConfig(update.config)
                 }),
         ])
@@ -220,16 +220,23 @@ impl cosmic::Application for AppModel {
                     self.ticker_input.clear();
                 }
             }
-            Message::RemoveTicker(index) => {
+            Message::RemoveTicker(ticker) => {
                 if let Some(list) =
                     self.data.watchlists.get_mut(self.selected_list)
-                    && index < list.tickers.len()
                 {
-                    list.tickers.remove(index);
-                    self.save_data();
+                    let starting_len = list.tickers.len();
+                    list.tickers.retain(|t| *t != ticker);
+
+                    if starting_len != list.tickers.len() {
+                        self.save_data();
+                    } else {
+                        eprintln!(
+                            "RemoveTicker({ticker}): symbol was not found"
+                        );
+                    }
                 } else {
                     eprintln!(
-                        "RemoveTicker({index}): no symbol at that position in list {}",
+                        "RemoveTicker({ticker}): no list at selected index {}",
                         self.selected_list
                     );
                 }
@@ -269,6 +276,9 @@ impl cosmic::Application for AppModel {
                 self.data.watchlists.get(self.selected_list),
                 &self.ticker_input,
             ),
+            Page::Settings => {
+                ui::settings_page::settings_page_view(&self.config.settings)
+            }
         };
 
         self.core
