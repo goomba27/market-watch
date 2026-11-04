@@ -3,27 +3,22 @@
 use crate::app::{Message, Page};
 use crate::globals;
 use crate::model::watchlist::Watchlist;
-use crate::ui::common::{generate_ticker_list, page_layout};
+use crate::ui::common::{self, ListMode};
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
 
-pub fn view(
-    watchlists: &[Watchlist],
-    selected_list: usize,
-) -> Element<'_, Message> {
+pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Message> {
     let selected = watchlists.get(selected_list);
 
-    let edit_list_button =
-        widget::button::icon(widget::icon::from_name("edit-symbolic"))
-            .label("Modify List")
-            .on_press(Message::OpenPage(Page::EditList));
+    let edit_list_button = widget::button::icon(widget::icon::from_name("edit-symbolic"))
+        .label("Modify List")
+        .on_press(Message::OpenPage(Page::EditList));
 
-    let new_list_button =
-        widget::button::icon(widget::icon::from_name("list-add-symbolic"))
-            .label("Create List")
-            .on_press(Message::OpenPage(Page::Create));
+    let new_list_button = widget::button::icon(widget::icon::from_name("list-add-symbolic"))
+        .label("Create List")
+        .on_press(Message::OpenPage(Page::Create));
 
     let action_row = widget::row::with_capacity(2)
         .push(edit_list_button)
@@ -34,7 +29,7 @@ pub fn view(
         .width(Length::Fill)
         .align_x(Alignment::End);
 
-    let body = generate_ticker_list(selected, false);
+    let body = common::generate_ticker_list(selected, ListMode::ReadOnly);
 
     let tab_row = widget::row::with_children(
         watchlists
@@ -72,7 +67,7 @@ pub fn view(
         .push(tabs)
         .push(body);
 
-    page_layout("Market Watch", content)
+    common::page_layout("Market Watch", content)
 }
 
 pub fn watchlist_button(
@@ -84,8 +79,7 @@ pub fn watchlist_button(
     // label: wraps instead of forcing the button wider
     let label = widget::text::body(name).width(Length::Fill);
 
-    let badge = widget::container(widget::text::caption(count.to_string()))
-        .padding([1, 6]);
+    let badge = widget::container(widget::text::caption(count.to_string())).padding([1, 6]);
 
     let style = if selected {
         cosmic::theme::Button::Suggested

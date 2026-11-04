@@ -3,9 +3,8 @@ use crate::model::watchlist::Watchlist;
 use serde::{Deserialize, Serialize};
 
 /// CosmicConfigEntry will generate a set_ method so we have setters
-use cosmic::cosmic_config::{
-    self, CosmicConfigEntry, cosmic_config_derive::CosmicConfigEntry,
-};
+use cosmic::cosmic_config::cosmic_config_derive::CosmicConfigEntry;
+use cosmic::cosmic_config::{self, CosmicConfigEntry};
 
 /// Settings: one file at ~/.config/cosmic/<APP_ID>/v1/settings
 #[derive(Debug, Default, Clone, CosmicConfigEntry, PartialEq)]

@@ -4,14 +4,13 @@ use crate::config::{AppData, Config, Settings};
 use crate::globals;
 use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
-use crate::provider::fetch_quotes;
+use crate::provider;
 use crate::ui;
 use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
-use cosmic::iced::platform_specific::shell::wayland::commands::popup::{
-    destroy_popup, get_popup,
-};
+use cosmic::iced::platform_specific::shell::wayland::commands::popup;
 
-use cosmic::iced::{Limits, Subscription, window::Id};
+use cosmic::iced::window::Id;
+use cosmic::iced::{Limits, Subscription};
 use cosmic::prelude::*;
 
 #[derive(Default)]
@@ -94,8 +93,7 @@ impl cosmic::Application for AppModel {
         _flags: Self::Flags,
     ) -> (Self, Task<cosmic::Action<Self::Message>>) {
         // Settings: ~/.config/cosmic/<APP_ID>/v1/
-        let config_handle =
-            cosmic_config::Config::new(Self::APP_ID, Config::VERSION).ok();
+        let config_handle = cosmic_config::Config::new(Self::APP_ID, Config::VERSION).ok();
 
         let config = match &config_handle {
             Some(h) => match Config::get_entry(h) {
@@ -121,12 +119,7 @@ impl cosmic::Application for AppModel {
 
         // App data: ~/.local/share/cosmic/<APP_ID>/v1/
         let data_handle = dirs::data_dir().and_then(|dir| {
-            cosmic_config::Config::with_custom_path(
-                Self::APP_ID,
-                AppData::VERSION,
-                dir,
-            )
-            .ok()
+            cosmic_config::Config::with_custom_path(Self::APP_ID, AppData::VERSION, dir).ok()
         });
 
         let data = data_handle
@@ -144,9 +137,7 @@ impl cosmic::Application for AppModel {
         };
 
         let fetch = cosmic::task::future(async {
-            Message::QoutesFetched(
-                fetch_quotes().await.map_err(|e| e.to_string()),
-            )
+            Message::QoutesFetched(provider::fetch_quotes().await.map_err(|e| e.to_string()))
         });
 
         (app, fetch)
@@ -171,34 +162,30 @@ impl cosmic::Application for AppModel {
     }
 
     //update only changes states, doesnt draw anything
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> Task<cosmic::Action<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> Task<cosmic::Action<Self::Message>> {
         match message {
             Message::UpdateConfig(config) => {
                 self.config = config;
             }
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
-                    destroy_popup(p)
+                    popup::destroy_popup(p)
                 } else {
                     let new_id = Id::unique();
                     self.popup.replace(new_id);
-                    let mut popup_settings =
-                        self.core.applet.get_popup_settings(
-                            self.core.main_window_id().unwrap(),
-                            new_id,
-                            None,
-                            None,
-                            None,
-                        );
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        self.core.main_window_id().unwrap(),
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(globals::POPUP_WIDTH)
                         .min_width(globals::POPUP_WIDTH)
                         .min_height(globals::POPUP_HEIGHT)
                         .max_height(globals::POPUP_HEIGHT);
-                    get_popup(popup_settings)
+                    popup::get_popup(popup_settings)
                 };
             }
             Message::PopupClosed(id) => {
@@ -224,8 +211,7 @@ impl cosmic::Application for AppModel {
             Message::AddTicker(symbol) => {
                 let symbol = symbol.trim().to_uppercase();
                 if !symbol.is_empty()
-                    && let Some(list) =
-                        self.data.watchlists.get_mut(self.selected_list)
+                    && let Some(list) = self.data.watchlists.get_mut(self.selected_list)
                     && !list.tickers.contains(&symbol)
                 {
                     list.tickers.push(symbol);
@@ -234,18 +220,14 @@ impl cosmic::Application for AppModel {
                 }
             }
             Message::RemoveTicker(ticker) => {
-                if let Some(list) =
-                    self.data.watchlists.get_mut(self.selected_list)
-                {
+                if let Some(list) = self.data.watchlists.get_mut(self.selected_list) {
                     let starting_len = list.tickers.len();
                     list.tickers.retain(|t| *t != ticker);
 
                     if starting_len != list.tickers.len() {
                         self.save_data();
                     } else {
-                        eprintln!(
-                            "RemoveTicker({ticker}): symbol was not found"
-                        );
+                        eprintln!("RemoveTicker({ticker}): symbol was not found");
                     }
                 } else {
                     eprintln!(
@@ -281,20 +263,13 @@ impl cosmic::Application for AppModel {
 
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let page = match self.page {
-            Page::Create => {
-                ui::manage_page::create_new_list_view(&self.list_name)
-            }
-            Page::Watchlist => ui::watchlist_page::view(
-                &self.data.watchlists,
-                self.selected_list,
-            ),
+            Page::Create => ui::manage_page::create_new_list_view(&self.list_name),
+            Page::Watchlist => ui::watchlist_page::view(&self.data.watchlists, self.selected_list),
             Page::EditList => ui::manage_page::edit_list_view(
                 self.data.watchlists.get(self.selected_list),
                 &self.ticker_input,
             ),
-            Page::Settings => {
-                ui::settings_page::settings_page_view(&self.config.settings)
-            }
+            Page::Settings => ui::settings_page::settings_page_view(&self.config.settings),
         };
 
         self.core
