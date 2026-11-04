@@ -13,11 +13,11 @@ pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Messa
     let selected = watchlists.get(selected_list);
 
     let edit_list_button = widget::button::icon(widget::icon::from_name("edit-symbolic"))
-        .label("Modify List")
+        .label(globals::LABEL_MODIFY_LIST)
         .on_press(Message::OpenPage(Page::EditList));
 
     let new_list_button = widget::button::icon(widget::icon::from_name("list-add-symbolic"))
-        .label("Create List")
+        .label(globals::LABEL_CREATE_LIST)
         .on_press(Message::OpenPage(Page::Create));
 
     let action_row = widget::row::with_capacity(2)
@@ -67,7 +67,7 @@ pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Messa
         .push(tabs)
         .push(body);
 
-    common::page_layout("Market Watch", content)
+    common::page_layout(globals::TITLE_WATCHLIST, content)
 }
 
 pub fn watchlist_button(

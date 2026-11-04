@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::app::Message;
+use crate::globals;
 use crate::model::watchlist::Watchlist;
 use crate::ui::common::{self, ListMode};
 use cosmic::Element;
@@ -10,13 +11,13 @@ use cosmic::widget;
 pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
     let save_list_button = widget::container(
         widget::button::icon(widget::icon::from_name("document-save-as-symbolic"))
-            .label("Save List")
+            .label(globals::LABEL_SAVE_LIST)
             .on_press(Message::CreateWatchlist),
     )
     .width(Length::Fill)
     .align_x(Alignment::End);
 
-    let name_field = widget::text_input("List name", list_name)
+    let name_field = widget::text_input(globals::PLACEHOLDER_LIST_NAME, list_name)
         .on_input(Message::NewListNameChanged)
         .width(Length::Fill);
 
@@ -25,7 +26,7 @@ pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
         .push(name_field)
         .spacing(8);
 
-    common::page_layout("Create List", content)
+    common::page_layout(globals::TITLE_CREATE_LIST, content)
 }
 
 pub fn edit_list_view<'a>(
@@ -35,18 +36,18 @@ pub fn edit_list_view<'a>(
     //No list yet
     if list.is_none() {
         return common::page_layout(
-            "Edit List",
-            widget::container(widget::text::body("Create a list first")).padding([16, 0]),
+            globals::TITLE_EDIT_LIST,
+            widget::container(widget::text::body(globals::EMPTY_NO_LIST)).padding([16, 0]),
         );
     }
 
-    let symbol_field = widget::text_input("Symbol, e.g AAPL", ticker_input)
+    let symbol_field = widget::text_input(globals::PLACEHOLDER_SYMBOL, ticker_input)
         .on_input(Message::TickerInputChanged)
         .on_submit(Message::AddTicker)
         .width(Length::Fill);
 
     let add_button = widget::button::icon(widget::icon::from_name("list-add-symbolic"))
-        .label("Add to List")
+        .label(globals::LABEL_ADD_TO_LIST)
         .on_press(Message::AddTicker(ticker_input.to_string()));
 
     let add_row = widget::row::with_capacity(2)
@@ -60,5 +61,5 @@ pub fn edit_list_view<'a>(
 
     let content = widget::column::with_capacity(2).push(add_row).push(body);
 
-    common::page_layout("Edit List", content)
+    common::page_layout(globals::TITLE_EDIT_LIST, content)
 }

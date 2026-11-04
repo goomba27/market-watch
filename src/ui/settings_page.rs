@@ -20,9 +20,9 @@ pub fn settings_page_view(settings: &Settings) -> Element<'_, Message> {
     }
 
     let refresh_section = widget::settings::section()
-        .title("Refresh")
-        .add(widget::settings::item("Update prices every", buttons));
+        .title(globals::SECTION_REFRESH)
+        .add(widget::settings::item(globals::ITEM_REFRESH_EVERY, buttons));
     //------------------------------------------
 
-    common::page_layout("Settings", refresh_section)
+    common::page_layout(globals::TITLE_SETTINGS, refresh_section)
 }

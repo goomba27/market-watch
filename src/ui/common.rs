@@ -19,7 +19,7 @@ pub fn build_header<'a>(page_title: &'a str) -> Element<'a, Message> {
 
     let settings_button =
         widget::button::icon(widget::icon::from_name("preferences-system-symbolic"))
-            .label("Settings")
+            .label(globals::LABEL_SETTINGS)
             .on_press(Message::OpenPage(Page::Settings));
 
     widget::row::with_capacity(3)
@@ -36,7 +36,7 @@ pub fn build_header<'a>(page_title: &'a str) -> Element<'a, Message> {
 // for now all pages back button go to Watchlist
 pub fn back_button<'a>() -> Element<'a, Message> {
     widget::button::icon(widget::icon::from_name("go-previous-symbolic"))
-        .label("Back")
+        .label(globals::LABEL_BACK)
         .on_press(Message::OpenPage(Page::Watchlist))
         .into()
 }
@@ -62,7 +62,7 @@ pub fn generate_ticker_list<'a>(
             }
             row_acc.into_element()
         }
-        _ => widget::text::body("No ticker yet").into(),
+        _ => widget::text::body(globals::EMPTY_TICKER_LIST).into(),
     };
 
     widget::container(widget::scrollable::vertical(list))
@@ -75,7 +75,7 @@ pub fn generate_ticker_list<'a>(
 fn ticker_row(symbol: &str) -> Element<'_, Message> {
     widget::row::with_capacity(2)
         .push(widget::text::body(symbol).width(Length::Fill))
-        .push(widget::text("--"))
+        .push(widget::text(globals::NO_PRICE))
         .align_y(Alignment::Center)
         .into()
 }
