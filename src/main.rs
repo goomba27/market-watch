@@ -5,6 +5,7 @@ mod config;
 mod globals;
 mod i18n;
 mod model;
+mod provider;
 mod ui;
 
 fn main() -> cosmic::iced::Result {

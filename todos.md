@@ -31,8 +31,8 @@ Line numbers last checked on 2026-11-01, after adding delete-symbol.
 ## Features
 
 - [ ] **Grey out Modify List when there are no lists.** Use `.on_press_maybe(has_lists.then_some(..))` (`src/ui/watchlist_page.rs:17-19`). This is the lesson 0008 exercise. The edit page already handles `None` safely, so this is about UX, not a crash.
-- [ ] **Rename a list on the Modify List page.** The edit page (`edit_list_view` in `src/ui/manage_page.rs`) can add and remove symbols but not change the list's name. Add a name field at the top, filled with the current name when the page opens (like `api_key_input` is filled in `OpenPage(Page::Settings)`), and a message such as `RenameWatchlist` that trims the name, ignores it if empty, sets `list.name` on the selected list and calls `save_data`.
-- [x] **Settings UI.** `src/ui/settings_page.rs` has a Massive API key field (`secure_input` with show/hide, Save enabled only when the key changed) and refresh buttons for `globals::REFRESH_CHOICES` that send `SetRefreshSecs`, with the current choice highlighted. Both save through `AppModel::save_settings`.
+- [ ] **Rename a list on the Modify List page.** The edit page (`edit_list_view` in `src/ui/manage_page.rs`) can add and remove symbols but not change the list's name. Add a name field at the top, filled with the current name in the `OpenPage` handler when the page opens, and a message such as `RenameWatchlist` that trims the name, ignores it if empty, sets `list.name` on the selected list and calls `save_data`.
+- [x] **Settings UI.** `src/ui/settings_page.rs` has refresh buttons for `globals::REFRESH_CHOICES` that send `SetRefreshSecs`, with the current choice highlighted. They save through `AppModel::save_settings`.
 - [x] **Remove a symbol from a list.** `RemoveTicker(String)` removes the symbol with `retain` and saves only if something was removed (`src/app.rs`), and a trash button on each row of the edit page (`editable_row` in `src/ui/manage_page.rs`). Built from lesson 0010.
 
 ## Design decision

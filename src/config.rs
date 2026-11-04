@@ -26,14 +26,12 @@ pub struct AppData {
 pub struct Settings {
     pub refresh_secs: usize,
     pub show_change_percent: bool,
-    pub api_key: String,
 }
 impl Default for Settings {
     fn default() -> Self {
         Self {
             refresh_secs: 1800,
             show_change_percent: false,
-            api_key: String::new(),
         }
     }
 }

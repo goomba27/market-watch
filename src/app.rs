@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use crate::config::{AppData, Config, Settings};
 use crate::globals;
+use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
+use crate::provider::fetch_quotes;
 use crate::ui;
 use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{
     destroy_popup, get_popup,
 };
+
 use cosmic::iced::{Limits, Subscription, window::Id};
 use cosmic::prelude::*;
-
-use crate::config::{AppData, Config, Settings};
 
 #[derive(Default)]
 pub struct AppModel {
@@ -34,8 +36,6 @@ pub struct AppModel {
     page: Page,
     list_name: String,
     ticker_input: String,
-    api_key_input: String,
-    show_api_key: bool,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -53,10 +53,10 @@ pub enum Message {
     AddTicker(String),
     RemoveTicker(String),
 
+    //Prices
+    QoutesFetched(Result<Vec<Ticker>, String>),
+
     //Settings
-    ApiKeyInputChanged(String),
-    SaveApiKey,
-    ToggleShowApiKey,
     SetRefreshSecs(usize),
 
     //Navigation
@@ -143,7 +143,13 @@ impl cosmic::Application for AppModel {
             ..Default::default()
         };
 
-        (app, Task::none())
+        let fetch = cosmic::task::future(async {
+            Message::QoutesFetched(
+                fetch_quotes().await.map_err(|e| e.to_string()),
+            )
+        });
+
+        (app, fetch)
     }
 
     fn on_close_requested(&self, id: Id) -> Option<Message> {
@@ -212,13 +218,7 @@ impl cosmic::Application for AppModel {
                 self.page = Page::Watchlist;
             }
             Message::SelectList(i) => self.selected_list = i,
-            Message::OpenPage(page) => {
-                if matches!(page, Page::Settings) {
-                    self.api_key_input = self.config.settings.api_key.clone();
-                    self.show_api_key = false;
-                }
-                self.page = page;
-            }
+            Message::OpenPage(page) => self.page = page,
             Message::NewListNameChanged(name) => self.list_name = name,
             Message::TickerInputChanged(text) => self.ticker_input = text,
             Message::AddTicker(symbol) => {
@@ -259,13 +259,14 @@ impl cosmic::Application for AppModel {
                 settings.refresh_secs = secs;
                 self.save_settings(settings);
             }
-            Message::ApiKeyInputChanged(text) => self.api_key_input = text,
-            Message::SaveApiKey => {
-                let mut settings = self.config.settings.clone();
-                settings.api_key = self.api_key_input.trim().to_string();
-                self.save_settings(settings);
+            Message::QoutesFetched(Ok(tickers)) => {
+                for t in &tickers {
+                    eprintln!("{} {} @ {}", t.symbol, t.price, t.as_of);
+                }
             }
-            Message::ToggleShowApiKey => self.show_api_key = !self.show_api_key,
+            Message::QoutesFetched(Err(err)) => {
+                eprintln!("failed to fetch qoutes: {err}");
+            }
         }
         Task::none()
     }
@@ -291,11 +292,9 @@ impl cosmic::Application for AppModel {
                 self.data.watchlists.get(self.selected_list),
                 &self.ticker_input,
             ),
-            Page::Settings => ui::settings_page::settings_page_view(
-                &self.config.settings,
-                &self.api_key_input,
-                self.show_api_key,
-            ),
+            Page::Settings => {
+                ui::settings_page::settings_page_view(&self.config.settings)
+            }
         };
 
         self.core

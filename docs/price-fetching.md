@@ -1,42 +1,44 @@
 # Price fetching design
 
-How Market Watch fetches ticker prices from Massive (formerly Polygon.io).
+How Market Watch fetches ticker prices from Yahoo Finance, using the [yfinance-rs](https://crates.io/crates/yfinance-rs) crate.
 
-Written on 2026-11-03, before any of it was built.
+Written on 2026-11-03, before any of it was built. Updated the same day to switch from Massive (formerly Polygon.io) to yfinance-rs.
 
-## The rate limit that shapes everything
+## What the source gives us
 
-Massive allows **5 requests per minute**, and each request returns **one ticker**. So the app can make at most one request every 12 seconds, and it has to work through the symbols one at a time, round robin.
-
-The limit applies to everything using that API key, not just this app. Any other request the app makes (a "Test key" button in Settings, for example) counts against it and has to go through the same clock.
+- **Batch quotes.** `yfinance_rs::quotes(&client, symbols)` fetches many symbols in one request, so one request can refresh every symbol in every watchlist.
+- **No API key.** yfinance-rs talks to Yahoo's unofficial API and handles the cookie and "crumb" login itself. The user has nothing to set up.
+- **No published rate limit.** Yahoo answers with HTTP 429 when it's called too often, which yfinance-rs returns as `YfError::RateLimited`. Since one request covers every symbol, the app only needs a request every few minutes, which is well clear of that.
+- **Unofficial.** Yahoo can change or block the API without notice. That's the reason the crate stays behind a single module (see below), so it can be replaced without touching the rest of the app.
 
 ## Layers
 
 ```
 ┌──────────────────────── app.rs ────────────────────────┐
 │ state: quotes: HashMap<symbol, QuoteEntry>              │
-│          QuoteEntry = last Quote + fetched_at + error   │
-│        in_flight: Option<symbol>                        │
+│          QuoteEntry = last Quote + fetched_at           │
+│        last_fetch: Option<Instant>, last_error          │
+│        in_flight: bool                                  │
 │        paused_until (after a rate-limit reply)          │
 │                                                         │
-│ every ~12–13s ──► Tick                                  │
+│ every refresh_secs ──► Tick                             │
 │    if in flight or paused → do nothing                  │
-│    else ask the scheduler for the next symbol ──┐       │
-│                                                 ▼       │
-│                  scheduler (pure logic, no I/O)         │
-│                  all symbols + entries + now            │
-│                  + refresh_secs → Some(symbol) / None   │
-│                                                 │       │
-│    Some(sym) → Task::perform(fetch_quote(sym)) ─┘       │
+│    else collect the symbols to fetch ──┐                │
+│                                        ▼                │
+│                  model/refresh.rs (pure logic, no I/O)  │
+│                  all watchlists → deduplicated symbols  │
+│                                        │                │
+│    non-empty → Task::perform(fetch_quotes(symbols)) ─┘  │
 │                                                         │
-│ QuoteLoaded(sym, Result) → update that one entry        │
+│ QuotesLoaded(Result) → update the entries it returned   │
 └────────────┬──────────────────────────────┬────────────┘
              │ calls                         │ reads
              ▼                               ▼
    provider.rs (network)              ui/ (appearance)
-   - fetch_quote(client, key, sym)    - ticker row gets Option<&Quote>
-   - Massive's JSON types (private)   - "Updated 10:32" / error line
-   - turns them into a Quote          - up/down colours in ui/style.rs
+   - fetch_quotes(client, symbols)    - ticker row gets Option<&Quote>
+   - the only file that uses          - "Updated 10:32" / error line
+     yfinance-rs                      - up/down colours in ui/style.rs
+   - turns its Quote into ours
              │
              ▼
    model/quote.rs (plain data, no cosmic, no HTTP)
@@ -45,71 +47,53 @@ The limit applies to everything using that API key, not just this app. Any other
 
 Each layer only knows about the one below it.
 
-- **`model/quote.rs`** is plain data. It knows nothing about Massive or COSMIC, so the UI and tests can use it freely.
-- **`model/refresh.rs`** (the scheduler) is pure logic: given the symbols, their entries, the current time and `refresh_secs`, it returns which symbol to fetch next, or none. It does no I/O, so it's easy to test.
-- **`provider.rs`** is the only place that knows Massive exists. It exposes one async function that fetches one symbol and returns a `Quote` or a provider error (no key, bad key, rate limited, unknown symbol, network, unexpected response). Massive's response structs stay private to this file, so a change in their API touches one file. It never decides *when* to fetch.
-- **`app.rs`** runs the clock, asks the scheduler, starts the fetch and stores the result. It doesn't parse JSON or build URLs.
+- **`model/quote.rs`** is plain data. It knows nothing about Yahoo or COSMIC, so the UI and tests can use it freely.
+- **`model/refresh.rs`** is pure logic: given the watchlists, it returns the deduplicated set of symbols to fetch. It does no I/O, so it's easy to test.
+- **`provider.rs`** is the only place that knows yfinance-rs exists. It exposes one async function that fetches a list of symbols and returns our `Quote`s, or a provider error (rate limited, network, unexpected response). yfinance-rs types stay inside this file, so switching sources again touches one file. It never decides *when* to fetch.
+- **`app.rs`** runs the clock, starts the fetch and stores the results. It doesn't know about Yahoo.
 - **`ui/`** only draws. A row with no quote yet shows `--`, as it does today.
 
-## Two clocks
+## One clock
 
-- **The rate clock** is a fixed subscription that ticks every 12 seconds (13 to stay safely under the limit). Each tick sends at most one request, so the app can never go over 5 a minute however many symbols there are.
-- **`refresh_secs`** (the Settings choice) no longer drives a timer. It means "a symbol is stale after this long". The scheduler skips symbols that are still fresh, so with few symbols most ticks send nothing.
+`refresh_secs` (the Settings choice) drives a subscription that ticks every `refresh_secs`. Each tick sends one batch request for every symbol. There's no per-symbol scheduling and no cycle time to explain: every symbol updates on every tick.
 
-Only run the rate clock while an API key is set.
+Also fetch right away, without waiting for the next tick:
 
-## Which symbol is next
+- when the app starts,
+- when a symbol is added to a watchlist (fetch just that symbol, so it doesn't sit at `--` until the next tick).
 
-The scheduler works on the deduplicated set of symbols across **all** watchlists, not just the selected one. Switching tabs is then instant, and a symbol in two lists costs one request.
+## Which symbols
 
-On each tick it picks:
+Fetch the deduplicated set of symbols across **all** watchlists, not just the selected one. Switching tabs is then instant, and a symbol in two lists is only asked for once.
 
-1. A symbol that has **never been fetched**, so a newly added symbol shows up within about 12 seconds.
-2. Otherwise, the **stale** symbol whose `fetched_at` is **oldest**.
-3. Otherwise, nothing.
-
-This behaves like a round robin but doesn't break when symbols are added or removed mid-cycle. A rotating index would skip or repeat symbols when the list changes under it.
-
-## Cycle time
-
-With N symbols, one full pass takes N × 12 seconds:
-
-| Symbols | Full pass |
-|---|---|
-| 10 | 2 min |
-| 25 | 5 min |
-| 50 | 10 min |
-
-If that's longer than `refresh_secs`, prices really update every N × 12 seconds. Say so on the Settings page under the refresh buttons, for example "40 symbols: each updates about every 8 min", so the 5m option isn't silently wrong.
+`yfinance_rs::quotes` returns an error for an empty list, so skip the request when there are no symbols.
 
 ## Errors
 
 | What happened | What the app does |
 |---|---|
-| Success | Store the quote and `fetched_at`, clear that symbol's error. |
-| Unknown symbol or bad response | Store the error and still set `fetched_at`, so a typo like "APPL" doesn't block the queue. It's retried only once it's stale again. The row shows "?" or "not found". |
-| Rate limited (HTTP 429) | Don't charge it to the symbol. Set `paused_until` to about 60 seconds from now and leave the symbol next in line. |
-| Bad API key (401/403) | Pause all fetching and show "API key rejected" until a new key is saved. |
-| Network down | Keep the old quotes, pause briefly, and let the clock retry. |
-| No API key | Don't fetch at all. Show a hint pointing to Settings. |
+| Success | Store each returned quote with its `fetched_at`. Clear `last_error`. |
+| Unknown symbol | Yahoo leaves it out of the result rather than failing the whole request. A symbol that has never had a quote shows "not found"; one that had a quote before keeps it. |
+| Rate limited (`YfError::RateLimited`) | Set `paused_until` to a few minutes from now and skip ticks until then. |
+| Network down or Yahoo server error | Keep the old quotes, show a short message, and let the next tick retry. |
+| Unexpected response | Same as network down. If it keeps happening, Yahoo has probably changed something and yfinance-rs needs updating. |
 
 A failed fetch never wipes good data. The view shows the last quotes with "Updated 10:32" and a short message.
 
 ## Other choices
 
-- **HTTP client:** `reqwest` with the `json` and `rustls-tls` features. rustls avoids depending on the system's OpenSSL, which makes packaging easier. Create one client and reuse it. tokio is already a dependency.
-- **API key:** send it as a header rather than a query parameter, and never log the full URL or the key.
+- **Client:** create one `YfClient` and reuse it, so the login cookie is reused too. yfinance-rs uses tokio and its own `reqwest`, so the app doesn't need a direct `reqwest` dependency.
 - **No provider trait yet.** With one provider, a plain module is simpler. The single-function boundary makes it easy to turn into a trait if a second source is ever added.
-- **Plan check:** Massive's free plan may only give end-of-day data. If so, refreshing more than about once a day doesn't show new prices. Check the current docs for which endpoint and data the plan includes before choosing the endpoint in `provider.rs`.
-- **Tests:** save a real Massive JSON response as a test file and check that `provider.rs` turns it into the right `Quote`. Test the scheduler with a fixed "now". Neither needs the network.
+- **Rust version:** yfinance-rs 0.9 needs Rust 1.91 or newer.
+- **Tests:** test the conversion from a yfinance-rs `Quote` to ours with hand-built values, and test the symbol deduplication in `model/refresh.rs`. Neither needs the network.
 
 ## Build order
 
 Each step builds on its own and can be its own commit.
 
 1. Write the `Quote` struct, and pass `Option<&Quote>` to the ticker row (still showing `--`).
-2. Write `fetch_quote` for one symbol, and test it against a saved JSON response.
-3. Write the scheduler and its unit tests.
-4. Add the 12-second subscription, `Tick` and `QuoteLoaded`, and the handling of `in_flight` and `paused_until` in `app.rs`.
-5. Show the error states and the cycle-time hint on the Settings page.
-6. Extras: fetch new symbols right after they're added, restart after a key is saved, add up/down colours.
+2. Replace `reqwest` with `yfinance-rs` in `Cargo.toml`, and write `fetch_quotes` in `provider.rs` with a test for the conversion.
+3. Write the symbol deduplication in `model/refresh.rs` and its unit tests.
+4. Add the `refresh_secs` subscription, `Tick` and `QuotesLoaded`, and the handling of `in_flight` and `paused_until` in `app.rs`.
+5. Show the error states.
+6. Extras: fetch new symbols right after they're added, add up/down colours.
