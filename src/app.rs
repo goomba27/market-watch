@@ -8,11 +8,11 @@ use crate::provider;
 use crate::ui;
 use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup;
-use std::collections::HashMap;
-
 use cosmic::iced::window::Id;
-use cosmic::iced::{Limits, Subscription};
+use cosmic::iced::{Limits, Subscription, time};
 use cosmic::prelude::*;
+use std::collections::HashMap;
+use std::time::Duration;
 use yfinance_rs::YfClient;
 
 #[derive(Default)]
@@ -43,6 +43,9 @@ pub struct AppModel {
     page: Page,
     list_name: String,
     ticker_input: String,
+
+    /// True while a quote fetch is running, so ticks don't stack requests.
+    in_flight: bool,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -62,6 +65,7 @@ pub enum Message {
 
     //Prices
     QuotesFetched(Result<Vec<Ticker>, String>),
+    Tick,
 
     //Settings
     SetRefreshSecs(usize),
@@ -135,7 +139,7 @@ impl cosmic::Application for AppModel {
             .map(|h| AppData::get_entry(h).unwrap_or_else(|(_errors, d)| d))
             .unwrap_or_default();
 
-        let app = AppModel {
+        let mut app = AppModel {
             core,
             config,
             config_handle,
@@ -153,16 +157,20 @@ impl cosmic::Application for AppModel {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
+        let refresh_secs = self.config.settings.refresh_secs as u64;
+        let refresh = if refresh_secs == 0 {
+            //0 would panic treat it as off
+            Subscription::none()
+        } else {
+            time::every(Duration::from_secs(refresh_secs)).map(|_| Message::Tick)
+        };
+
         Subscription::batch(vec![
             // Watch for application configuration changes.
             self.core()
                 .watch_config::<Config>(Self::APP_ID)
-                .map(|update| {
-                    // for why in update.errors {
-                    //     tracing::error!(?why, "app config error");
-                    // }
-                    Message::UpdateConfig(update.config)
-                }),
+                .map(|update| Message::UpdateConfig(update.config)),
+            refresh,
         ])
     }
 
@@ -243,16 +251,31 @@ impl cosmic::Application for AppModel {
             }
             Message::SetRefreshSecs(secs) => {
                 let mut settings = self.config.settings.clone();
+                eprintln!("refresh_secs changed to {secs}");
                 settings.refresh_secs = secs;
                 self.save_settings(settings);
             }
-            Message::QuotesFetched(Ok(tickers)) => {
-                for t in tickers {
-                    self.quotes.insert(t.symbol.clone(), t);
+            Message::QuotesFetched(result) => {
+                self.in_flight = false;
+
+                eprintln!("Quotes Fetched: {result:?}");
+                match result {
+                    Ok(tickers) => {
+                        for t in tickers {
+                            self.quotes.insert(t.symbol.clone(), t);
+                        }
+                    }
+                    Err(err) => {
+                        eprintln!("failed to fetch quotes: {err}");
+                    }
                 }
             }
-            Message::QuotesFetched(Err(err)) => {
-                eprintln!("failed to fetch quotes: {err}");
+            Message::Tick => {
+                eprintln!("tick, in_flight={}", self.in_flight);
+                if self.in_flight {
+                    return Task::none();
+                }
+                return self.fetch_all_quotes();
             }
         }
         Task::none()
@@ -321,11 +344,13 @@ impl AppModel {
     /// Starts one fetch for every symbol in every watchlist.
     ///
     /// Returns no task when there are no symbols, since Yahoo rejects an empty request.
-    fn fetch_all_quotes(&self) -> Task<cosmic::Action<Message>> {
+    fn fetch_all_quotes(&mut self) -> Task<cosmic::Action<Message>> {
         let symbols = provider::all_symbols(&self.data.watchlists);
         if symbols.is_empty() {
             return Task::none();
         }
+
+        self.in_flight = true;
 
         let client = self.yf_client.clone();
         cosmic::task::future(async move {
