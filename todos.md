@@ -1,7 +1,7 @@
 # TODOs
 
 Code problems first found in the lesson 0003 review (`teaching/lessons/0003-a-tour-of-your-applet-code.html`), plus later reviews.
-Line numbers last checked on 2026-11-04, after lesson 0012 (prices on startup).
+Line numbers last checked on 2026-11-05, after lesson 0014 (refresh timer).
 
 <!-- Note for Claude: when an item is checked off ([x]), move it to the bottom of its own section, below the unchecked items. -->
 
@@ -14,11 +14,12 @@ Line numbers last checked on 2026-11-04, after lesson 0012 (prices on startup).
 
 ## Cleanup
 
-- [ ] **Hide header buttons that go nowhere.** `build_header` (`src/ui/common.rs:12`) shows Back and Settings on every page, so the Watchlist page has a Back button to itself and the Settings page has a Settings button to itself. Add `show_back: bool` and `show_settings: bool` parameters and skip each button when false (`.push_maybe(show_back.then(back_button))` or an `if`). Also fix the "black" typo in the TODO comment at `common.rs:8`.
+- [ ] **Remove the refresh debug prints.** Commit `b6e57b7` kept three test-only `eprintln!`s in `src/app.rs`: `refresh_secs changed to {secs}` (`SetRefreshSecs`, line 254), `Quotes Fetched: {result:?}` (line 261, prints every ticker on every tick and doubles up error messages), and `tick, in_flight=…` (line 274). Also reword the `//0 would panic treat it as off` comment in `subscription` (line 162).
+- [ ] **Hide header buttons that go nowhere.** `build_header` (`src/ui/common.rs:18`) shows Back and Settings on every page, so the Watchlist page has a Back button to itself and the Settings page has a Settings button to itself. Add `show_back: bool` and `show_settings: bool` parameters and skip each button when false (`.push_maybe(show_back.then(back_button))` or an `if`). Also fix the "black" typo in the TODO comment at `common.rs:14`.
 - [ ] **Centre the header title.** The title is `Fill` with `align_x(Center)`, so it centres in the space left between the buttons, not across the popup. "Back" and "Settings" have different widths, so it sits off centre, and it'll shift more once one button is hidden. Fix it by putting the same width on both side slots, or an empty space on the side that has no button.
 - [ ] **Update `docs/price-fetching.md` for the current code.** The doc still says `Quote`, `QuoteEntry` and `model/quote.rs` (the diagram, the layer list and the tests note). The model is now `Ticker` in `src/model/ticker.rs`, and its prices are `Decimal`. It also says symbols are collected in `refresh.rs`, but they're collected by `provider::all_symbols` (`src/provider.rs:33`), and there's no `refresh.rs`. Fix the diagram, the layer list, the tests note and build order step 3.
 - [ ] **Test `all_symbols`.** `cargo test` runs 0 tests. Add a `#[cfg(test)]` module in `src/provider.rs`: no lists gives an empty set, and a symbol in two lists appears once. It returns a `HashSet`, so check `len()` and `contains(..)` rather than a fixed order.
-- [ ] **Say when a symbol is already in the list.** `AddTicker` (`src/app.rs:216`) quietly does nothing for a duplicate, and the text field keeps the text because `ticker_input.clear()` is inside the `if`. Either clear the field anyway, or show a short "already in this list" message.
+- [ ] **Say when a symbol is already in the list.** `AddTicker` (`src/app.rs:224`) quietly does nothing for a duplicate, and the text field keeps the text because `ticker_input.clear()` is inside the `if`. Either clear the field anyway, or show a short "already in this list" message.
 - [x] **Fixed the `QoutesFetched` typo.** The message is now `QuotesFetched` in `src/app.rs`, and the error says "failed to fetch quotes".
 - [x] **Passed the symbols into `fetch_quotes`.** It takes `symbols: &HashSet<String>` from `provider::all_symbols`, and `AppModel::fetch_all_quotes` skips the request when there are none.
 - [x] **Reused one `YfClient`.** It's a field in `AppModel`, cloned into each fetch task, so the Yahoo login is reused.
@@ -37,13 +38,15 @@ Line numbers last checked on 2026-11-04, after lesson 0012 (prices on startup).
 
 ## Features
 
-- [ ] **Grey out Modify List when there are no lists.** Use `.on_press_maybe(has_lists.then_some(..))` (`src/ui/watchlist_page.rs:17-19`). This is the lesson 0008 exercise. The edit page already handles `None` safely, so this is about UX, not a crash.
+- [ ] **Grey out Modify List when there are no lists.** Use `.on_press_maybe(has_lists.then_some(..))` (`src/ui/watchlist_page.rs:22-24`). This is the lesson 0008 exercise. The edit page already handles `None` safely, so this is about UX, not a crash.
 - [ ] **Rename a list on the Modify List page.** The edit page (`edit_list_view` in `src/ui/manage_page.rs`) can add and remove symbols but not change the list's name. Add a name field at the top, filled with the current name in the `OpenPage` handler when the page opens, and a message such as `RenameWatchlist` that trims the name, ignores it if empty, sets `list.name` on the selected list and calls `save_data`.
-- [ ] **Refresh prices on a timer.** Steps 4–6 of the build order in `docs/price-fetching.md`: add a `refresh_secs` subscription that sends `Tick`, and have the `Tick` arm return `self.fetch_all_quotes()` (it already reuses `provider::all_symbols`). Track `in_flight` and `paused_until`, show error states (including symbols skipped by `fetch_quotes`, which only go to stderr now), and fetch a symbol right after it's added. Keep the fetch in `init` as the first fetch.
+- [ ] **Finish price refresh.** Steps 5–6 of the build order in `docs/price-fetching.md`. Add `paused_until` for Yahoo's rate limit: `YfError::RateLimited` is lost today because `fetch_all_quotes` turns the error into a `String`, so keep the error kind. Show error states in the popup (including symbols skipped by `fetch_quotes`, which only go to stderr now). Fetch a symbol right after it's added, so it doesn't sit at `--` until the next tick.
+- [ ] **Skip refresh while the US market is closed.** On weekends (Saturday and Sunday in US Eastern time), the `Tick` arm should return `Task::none()` instead of fetching, since prices don't change. Use `America/New_York`, not the computer's local time zone, so the check is right wherever the user is and across daylight saving changes. `chrono` is already a dependency, and `chrono-tz` (0.10.4) is already in `Cargo.lock` through another crate, so adding it to `Cargo.toml` is a small step. Put the check in a small pure function (for example `is_market_open(now: DateTime<Utc>) -> bool`) so it can be unit-tested with fixed dates, including a Friday evening and a Sunday evening in Eastern time. Keep the startup fetch in `init` as it is, so prices still show on a weekend. For now this covers US exchanges only: foreign tickers and international exchanges are ignored. Possible later extensions: regular hours only (9:30–16:00 ET) and US market holidays.
 - [ ] **Test the `Ticker` conversion.** Build a `yfinance_rs::Quote` by hand and check the price, the change and percent change, a missing previous close (both zero), and a missing price (error). Step 2 of the build order. No network needed.
 - [x] **Show prices in the ticker rows.** `AppModel.quotes` (`HashMap<String, Ticker>`, in memory only) is filled by `QuotesFetched(Ok(..))`, and each row gets `Option<&Ticker>` and shows the price to two decimals, or `--`. Fetched for every watchlist on startup by `fetch_all_quotes`. Built from lesson 0012.
 - [x] **Settings UI.** `src/ui/settings_page.rs` has refresh buttons for `globals::REFRESH_CHOICES` that send `SetRefreshSecs`, with the current choice highlighted. They save through `AppModel::save_settings`.
 - [x] **Remove a symbol from a list.** `RemoveTicker(String)` removes the symbol with `retain` and saves only if something was removed (`src/app.rs`), and a trash button on each row of the edit page (`editable_row` in `src/ui/manage_page.rs`). Built from lesson 0010.
+- [x] **Refresh prices on a timer.** `subscription` returns `time::every(refresh_secs).map(|_| Message::Tick)` (or `Subscription::none()` for 0), and the `Tick` arm calls `fetch_all_quotes`. An `in_flight` flag, set in `fetch_all_quotes` and cleared on every `QuotesFetched`, stops ticks from stacking requests. Changing the setting restarts the timer. Built from lesson 0014, commit `b6e57b7`.
 
 ## Design decision
 

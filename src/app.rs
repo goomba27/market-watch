@@ -251,14 +251,18 @@ impl cosmic::Application for AppModel {
             }
             Message::SetRefreshSecs(secs) => {
                 let mut settings = self.config.settings.clone();
+                //TODO: remove
                 eprintln!("refresh_secs changed to {secs}");
+
                 settings.refresh_secs = secs;
                 self.save_settings(settings);
             }
             Message::QuotesFetched(result) => {
                 self.in_flight = false;
 
-                eprintln!("Quotes Fetched: {result:?}");
+                // TODO: remove
+                eprintln!("Quotes Fetched: {result:#?}");
+
                 match result {
                     Ok(tickers) => {
                         for t in tickers {
@@ -271,7 +275,9 @@ impl cosmic::Application for AppModel {
                 }
             }
             Message::Tick => {
+                // TODO: Remove
                 eprintln!("tick, in_flight={}", self.in_flight);
+
                 if self.in_flight {
                     return Task::none();
                 }
