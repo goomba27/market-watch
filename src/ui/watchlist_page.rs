@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::collections::HashMap;
+
 use crate::app::{Message, Page};
 use crate::globals;
+use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
 use crate::ui::common::{self, ListMode};
 
@@ -9,7 +12,11 @@ use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
 
-pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Message> {
+pub fn view<'a>(
+    watchlists: &'a [Watchlist],
+    selected_list: usize,
+    quotes: &HashMap<String, Ticker>,
+) -> Element<'a, Message> {
     let selected = watchlists.get(selected_list);
 
     let edit_list_button = widget::button::icon(widget::icon::from_name("edit-symbolic"))
@@ -29,7 +36,7 @@ pub fn view(watchlists: &[Watchlist], selected_list: usize) -> Element<'_, Messa
         .width(Length::Fill)
         .align_x(Alignment::End);
 
-    let body = common::generate_ticker_list(selected, ListMode::ReadOnly);
+    let body = common::generate_ticker_list(selected, ListMode::ReadOnly, quotes);
 
     let tab_row = widget::row::with_children(
         watchlists

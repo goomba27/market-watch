@@ -2,11 +2,13 @@
 
 use crate::app::Message;
 use crate::globals;
+use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
 use crate::ui::common::{self, ListMode};
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
+use std::collections::HashMap;
 
 pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
     let save_list_button = widget::container(
@@ -32,6 +34,7 @@ pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
 pub fn edit_list_view<'a>(
     list: Option<&'a Watchlist>,
     ticker_input: &'a str,
+    quotes: &HashMap<String, Ticker>,
 ) -> Element<'a, Message> {
     //No list yet
     if list.is_none() {
@@ -57,7 +60,7 @@ pub fn edit_list_view<'a>(
         .padding([12, 0])
         .align_y(Alignment::Center);
 
-    let body = common::generate_ticker_list(list, ListMode::Editable);
+    let body = common::generate_ticker_list(list, ListMode::Editable, quotes);
 
     let content = widget::column::with_capacity(2).push(add_row).push(body);
 

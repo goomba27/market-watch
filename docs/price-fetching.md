@@ -25,7 +25,7 @@ Written on 2026-11-03, before any of it was built. Updated the same day to switc
 │    if in flight or paused → do nothing                  │
 │    else collect the symbols to fetch ──┐                │
 │                                        ▼                │
-│                  model/refresh.rs (pure logic, no I/O)  │
+│                  refresh.rs (pure logic, no I/O)        │
 │                  all watchlists → deduplicated symbols  │
 │                                        │                │
 │    non-empty → Task::perform(fetch_quotes(symbols)) ─┘  │
@@ -47,8 +47,8 @@ Written on 2026-11-03, before any of it was built. Updated the same day to switc
 
 Each layer only knows about the one below it.
 
-- **`model/quote.rs`** is plain data. It knows nothing about Yahoo or COSMIC, so the UI and tests can use it freely.
-- **`model/refresh.rs`** is pure logic: given the watchlists, it returns the deduplicated set of symbols to fetch. It does no I/O, so it's easy to test.
+- **`model/quote.rs`** is plain data. It knows nothing about Yahoo or COSMIC, so the UI and tests can use it freely. `model/` holds data structures only.
+- **`refresh.rs`** is pure logic: given the watchlists, it returns the deduplicated set of symbols to fetch. It does no I/O, so it's easy to test.
 - **`provider.rs`** is the only place that knows yfinance-rs exists. It exposes one async function that fetches a list of symbols and returns our `Quote`s, or a provider error (rate limited, network, unexpected response). yfinance-rs types stay inside this file, so switching sources again touches one file. It never decides *when* to fetch.
 - **`app.rs`** runs the clock, starts the fetch and stores the results. It doesn't know about Yahoo.
 - **`ui/`** only draws. A row with no quote yet shows `--`, as it does today.
@@ -85,7 +85,7 @@ A failed fetch never wipes good data. The view shows the last quotes with "Updat
 - **Client:** create one `YfClient` and reuse it, so the login cookie is reused too. yfinance-rs uses tokio and its own `reqwest`, so the app doesn't need a direct `reqwest` dependency.
 - **No provider trait yet.** With one provider, a plain module is simpler. The single-function boundary makes it easy to turn into a trait if a second source is ever added.
 - **Rust version:** yfinance-rs 0.9 needs Rust 1.91 or newer.
-- **Tests:** test the conversion from a yfinance-rs `Quote` to ours with hand-built values, and test the symbol deduplication in `model/refresh.rs`. Neither needs the network.
+- **Tests:** test the conversion from a yfinance-rs `Quote` to ours with hand-built values, and test the symbol deduplication in `refresh.rs`. Neither needs the network.
 
 ## Build order
 
@@ -93,7 +93,7 @@ Each step builds on its own and can be its own commit.
 
 1. Write the `Quote` struct, and pass `Option<&Quote>` to the ticker row (still showing `--`).
 2. Replace `reqwest` with `yfinance-rs` in `Cargo.toml`, and write `fetch_quotes` in `provider.rs` with a test for the conversion.
-3. Write the symbol deduplication in `model/refresh.rs` and its unit tests.
+3. Write the symbol deduplication in `refresh.rs` and its unit tests.
 4. Add the `refresh_secs` subscription, `Tick` and `QuotesLoaded`, and the handling of `in_flight` and `paused_until` in `app.rs`.
 5. Show the error states.
 6. Extras: fetch new symbols right after they're added, add up/down colours.

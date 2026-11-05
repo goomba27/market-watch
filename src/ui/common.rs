@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::collections::HashMap;
+
 use crate::globals;
+use crate::model::ticker::Ticker;
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
@@ -50,13 +53,14 @@ pub enum ListMode {
 pub fn generate_ticker_list<'a>(
     selected: Option<&'a Watchlist>,
     mode: ListMode,
+    quotes: &HashMap<String, Ticker>,
 ) -> Element<'a, Message> {
     let list: Element<Message> = match selected {
         Some(w) if !w.tickers.is_empty() => {
             let mut row_acc = widget::list_column();
             for t in &w.tickers {
                 row_acc = match mode {
-                    ListMode::ReadOnly => row_acc.add(ticker_row(t)),
+                    ListMode::ReadOnly => row_acc.add(ticker_row(t, quotes.get(t))),
                     ListMode::Editable => row_acc.add(editable_row(t)),
                 };
             }
@@ -72,10 +76,15 @@ pub fn generate_ticker_list<'a>(
         .into()
 }
 
-fn ticker_row(symbol: &str) -> Element<'_, Message> {
+fn ticker_row<'a>(symbol: &'a str, quote: Option<&Ticker>) -> Element<'a, Message> {
+    let price = match quote {
+        Some(q) => format!("{:.2}", q.price.round_dp(2)),
+        None => globals::NO_PRICE.to_string(),
+    };
+
     widget::row::with_capacity(2)
         .push(widget::text::body(symbol).width(Length::Fill))
-        .push(widget::text(globals::NO_PRICE))
+        .push(widget::text(price))
         .align_y(Alignment::Center)
         .into()
 }

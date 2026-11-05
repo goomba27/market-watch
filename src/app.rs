@@ -8,10 +8,12 @@ use crate::provider;
 use crate::ui;
 use cosmic::cosmic_config::{self, ConfigGet, CosmicConfigEntry};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup;
+use std::collections::HashMap;
 
 use cosmic::iced::window::Id;
 use cosmic::iced::{Limits, Subscription};
 use cosmic::prelude::*;
+use yfinance_rs::YfClient;
 
 #[derive(Default)]
 pub struct AppModel {
@@ -27,6 +29,12 @@ pub struct AppModel {
 
     /// Watchlists and anything else the user creates.
     data: AppData,
+
+    /// Latest quote for each symbol, from the last successful fetch.
+    quotes: HashMap<String, Ticker>,
+
+    /// One Yahoo client, reused so its login cookie is reused.
+    yf_client: YfClient,
 
     /// Config handle for app data
     data_handle: Option<cosmic_config::Config>,
@@ -53,7 +61,7 @@ pub enum Message {
     RemoveTicker(String),
 
     //Prices
-    QoutesFetched(Result<Vec<Ticker>, String>),
+    QuotesFetched(Result<Vec<Ticker>, String>),
 
     //Settings
     SetRefreshSecs(usize),
@@ -136,10 +144,7 @@ impl cosmic::Application for AppModel {
             ..Default::default()
         };
 
-        let fetch = cosmic::task::future(async {
-            Message::QoutesFetched(provider::fetch_quotes().await.map_err(|e| e.to_string()))
-        });
-
+        let fetch = app.fetch_all_quotes();
         (app, fetch)
     }
 
@@ -241,13 +246,13 @@ impl cosmic::Application for AppModel {
                 settings.refresh_secs = secs;
                 self.save_settings(settings);
             }
-            Message::QoutesFetched(Ok(tickers)) => {
-                for t in &tickers {
-                    eprintln!("{} {} @ {}", t.symbol, t.price, t.as_of);
+            Message::QuotesFetched(Ok(tickers)) => {
+                for t in tickers {
+                    self.quotes.insert(t.symbol.clone(), t);
                 }
             }
-            Message::QoutesFetched(Err(err)) => {
-                eprintln!("failed to fetch qoutes: {err}");
+            Message::QuotesFetched(Err(err)) => {
+                eprintln!("failed to fetch quotes: {err}");
             }
         }
         Task::none()
@@ -264,10 +269,13 @@ impl cosmic::Application for AppModel {
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let page = match self.page {
             Page::Create => ui::manage_page::create_new_list_view(&self.list_name),
-            Page::Watchlist => ui::watchlist_page::view(&self.data.watchlists, self.selected_list),
+            Page::Watchlist => {
+                ui::watchlist_page::view(&self.data.watchlists, self.selected_list, &self.quotes)
+            }
             Page::EditList => ui::manage_page::edit_list_view(
                 self.data.watchlists.get(self.selected_list),
                 &self.ticker_input,
+                &self.quotes,
             ),
             Page::Settings => ui::settings_page::settings_page_view(&self.config.settings),
         };
@@ -308,5 +316,24 @@ impl AppModel {
         {
             eprintln!("failed to save settings: {err}");
         }
+    }
+
+    /// Starts one fetch for every symbol in every watchlist.
+    ///
+    /// Returns no task when there are no symbols, since Yahoo rejects an empty request.
+    fn fetch_all_quotes(&self) -> Task<cosmic::Action<Message>> {
+        let symbols = provider::all_symbols(&self.data.watchlists);
+        if symbols.is_empty() {
+            return Task::none();
+        }
+
+        let client = self.yf_client.clone();
+        cosmic::task::future(async move {
+            Message::QuotesFetched(
+                provider::fetch_quotes(client, &symbols)
+                    .await
+                    .map_err(|e| e.to_string()),
+            )
+        })
     }
 }
