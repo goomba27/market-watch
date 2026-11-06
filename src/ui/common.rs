@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use crate::app::{Message, Page};
 use crate::globals;
 use crate::model::ticker::Ticker;
-use cosmic::Element;
-use cosmic::iced::{Alignment, Length};
-use cosmic::widget;
-
-use crate::app::{Message, Page};
 use crate::model::watchlist::Watchlist;
+use crate::ui::common;
+use cosmic::Element;
+use cosmic::iced::border::Radius;
+use cosmic::iced::{Alignment, Length};
+use cosmic::theme;
+use cosmic::widget;
+use cosmic::widget::button::Catalog;
+use cosmic::widget::button::Style;
+
+use yfinance_rs::Decimal;
 
 //TODO: add param to not display black on watchlist page show_back: bool
 //TODO: add param to not display settings on settings page show_settings: bool
@@ -50,10 +57,16 @@ pub enum ListMode {
     Editable,
 }
 
+#[derive(Clone, Copy)]
+pub enum ButtonState {
+    Selected,
+    NotSelected,
+}
+
 pub fn generate_ticker_list<'a>(
     selected: Option<&'a Watchlist>,
-    mode: ListMode,
     quotes: &HashMap<String, Ticker>,
+    mode: ListMode,
 ) -> Element<'a, Message> {
     let list: Element<Message> = match selected {
         Some(w) if !w.tickers.is_empty() => {
@@ -77,14 +90,34 @@ pub fn generate_ticker_list<'a>(
 }
 
 fn ticker_row<'a>(symbol: &'a str, quote: Option<&Ticker>) -> Element<'a, Message> {
-    let price = match quote {
-        Some(q) => format!("{:.2}", q.price.round_dp(2)),
-        None => globals::NO_PRICE.to_string(),
+    let price_area = match quote {
+        Some(q) => {
+            let style = match q.change_percent.cmp(&Decimal::from(0)) {
+                Ordering::Greater => theme::Text::Color(globals::GAIN_COLOR),
+                Ordering::Less => theme::Text::Color(globals::LOSS_COLOR),
+                Ordering::Equal => theme::Text::Color(globals::DEFAULT_TEXT_COLOR),
+            };
+
+            let price = widget::text(format!("${:}", q.price.round_dp(2))).size(18);
+
+            let change = widget::text(format!("{:}%", q.change_percent.round_dp(2)))
+                .class(style)
+                .size(16);
+
+            widget::column::with_capacity(2)
+                .push(price)
+                .push(change)
+                .align_x(Alignment::End)
+        }
+        None => widget::column::with_capacity(2)
+            .push(widget::text(globals::NO_PRICE).size(18))
+            .push(widget::text(globals::NO_PRICE).size(16))
+            .align_x(Alignment::End),
     };
 
     widget::row::with_capacity(2)
         .push(widget::text::body(symbol).width(Length::Fill))
-        .push(widget::text(price))
+        .push(price_area)
         .align_y(Alignment::Center)
         .into()
 }
@@ -125,4 +158,39 @@ pub fn page_layout<'a>(
         .width(Length::Fill)
         .height(Length::Fixed(globals::POPUP_HEIGHT))
         .into()
+}
+
+pub fn square_rounded_corners(mut style: Style) -> Style {
+    style.border_radius = Radius::from(globals::TAB_CORNER_RADIUS);
+    style
+}
+
+pub fn base(selected: bool) -> theme::Button {
+    match selected {
+        true => theme::Button::Suggested,
+        false => theme::Button::Standard,
+    }
+}
+
+/// The stock button look (accent when selected), with squarer rounded corners.
+pub fn tab_style(button_state: ButtonState) -> theme::Button {
+    let selected = match button_state {
+        ButtonState::Selected => true,
+        ButtonState::NotSelected => false,
+    };
+
+    theme::Button::Custom {
+        active: Box::new(move |focused, t| {
+            common::square_rounded_corners(t.active(focused, false, &common::base(selected)))
+        }),
+        disabled: Box::new(move |t| {
+            common::square_rounded_corners(t.disabled(&common::base(selected)))
+        }),
+        hovered: Box::new(move |focused, t| {
+            common::square_rounded_corners(t.hovered(focused, false, &common::base(selected)))
+        }),
+        pressed: Box::new(move |focused, t| {
+            common::square_rounded_corners(t.pressed(focused, false, &common::base(selected)))
+        }),
+    }
 }

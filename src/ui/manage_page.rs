@@ -60,7 +60,7 @@ pub fn edit_list_view<'a>(
         .padding([12, 0])
         .align_y(Alignment::Center);
 
-    let body = common::generate_ticker_list(list, ListMode::Editable, quotes);
+    let body = common::generate_ticker_list(list, quotes, ListMode::Editable);
 
     let content = widget::column::with_capacity(2).push(add_row).push(body);
 

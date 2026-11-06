@@ -6,10 +6,11 @@ use crate::app::{Message, Page};
 use crate::globals;
 use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
-use crate::ui::common::{self, ListMode};
+use crate::ui::common::{self, ButtonState, ListMode};
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
+
 use cosmic::widget;
 
 pub fn view<'a>(
@@ -36,8 +37,6 @@ pub fn view<'a>(
         .width(Length::Fill)
         .align_x(Alignment::End);
 
-    let body = common::generate_ticker_list(selected, ListMode::ReadOnly, quotes);
-
     let tab_row = widget::row::with_children(
         watchlists
             .iter()
@@ -46,7 +45,11 @@ pub fn view<'a>(
                 widget::container(watchlist_button(
                     &l.name,
                     l.tickers.len(),
-                    i == selected_list,
+                    if i == selected_list {
+                        ButtonState::Selected
+                    } else {
+                        ButtonState::NotSelected
+                    },
                     Message::SelectList(i),
                 ))
                 .width(Length::Fixed(globals::TAB_WIDTH))
@@ -69,6 +72,8 @@ pub fn view<'a>(
         .padding([8, 0])
         .width(Length::Fill);
 
+    let body = common::generate_ticker_list(selected, quotes, ListMode::ReadOnly);
+
     let content = widget::column::with_capacity(3)
         .push(actions_container)
         .push(tabs)
@@ -80,19 +85,13 @@ pub fn view<'a>(
 pub fn watchlist_button(
     name: &str,
     count: usize,
-    selected: bool,
+    button_state: ButtonState,
     on_press: Message,
 ) -> Element<'_, Message> {
     // label: wraps instead of forcing the button wider
     let label = widget::text::body(name).width(Length::Fill);
 
     let badge = widget::container(widget::text::caption(count.to_string())).padding([1, 6]);
-
-    let style = if selected {
-        cosmic::theme::Button::Suggested
-    } else {
-        cosmic::theme::Button::Standard
-    };
 
     // button: share the row equally
     widget::button::custom(
@@ -103,7 +102,7 @@ pub fn watchlist_button(
             .align_y(Alignment::Center)
             .height(Length::Fill),
     )
-    .class(style)
+    .class(common::tab_style(button_state))
     .width(Length::Fill)
     .height(Length::Fixed(48.0))
     .padding([8, 14])

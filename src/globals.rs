@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use cosmic::iced::Color;
+
 pub const TAB_WIDTH: f32 = 150.0;
 pub const POPUP_HEIGHT: f32 = 600.0;
 pub const POPUP_WIDTH: f32 = 600.0;
@@ -11,6 +13,9 @@ pub const REFRESH_CHOICES: [(usize, &str); 5] = [
     (3600, "1h"),
 ];
 pub const INSET: u16 = 16;
+
+/// Corner radius for tabs: squarer than the default pill-shaped buttons.
+pub const TAB_CORNER_RADIUS: f32 = 8.0;
 
 // Page titles
 pub const TITLE_WATCHLIST: &str = "Market Watch";
@@ -38,3 +43,8 @@ pub const ITEM_REFRESH_EVERY: &str = "Update prices every";
 pub const EMPTY_TICKER_LIST: &str = "No ticker yet";
 pub const EMPTY_NO_LIST: &str = "Create a list first";
 pub const NO_PRICE: &str = "--";
+
+// COLORS
+pub const GAIN_COLOR: Color = Color::from_rgb8(0x10, 0xb9, 0x81);
+pub const LOSS_COLOR: Color = Color::from_rgb8(0xef, 0x44, 0x44);
+pub const DEFAULT_TEXT_COLOR: Color = Color::from_rgb8(0xe7, 0xe7, 0xe7);

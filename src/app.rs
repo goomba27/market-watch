@@ -149,7 +149,9 @@ impl cosmic::Application for AppModel {
         };
 
         let fetch = app.fetch_all_quotes();
-        (app, fetch)
+        let dark = cosmic::command::set_theme(cosmic::Theme::dark());
+
+        (app, Task::batch([dark, fetch]))
     }
 
     fn on_close_requested(&self, id: Id) -> Option<Message> {
