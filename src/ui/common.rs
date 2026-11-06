@@ -70,6 +70,7 @@ fn settings_button<'a>() -> Element<'a, Message> {
     widget::button::icon(widget::icon::from_name("preferences-system-symbolic"))
         .label(globals::LABEL_SETTINGS)
         .on_press(Message::OpenPage(Page::Settings))
+        .class(square_button_class(ButtonState::NotSelected))
         .into()
 }
 
@@ -78,6 +79,7 @@ pub fn back_button<'a>() -> Element<'a, Message> {
     widget::button::icon(widget::icon::from_name("go-previous-symbolic"))
         .label(globals::LABEL_BACK)
         .on_press(Message::OpenPage(Page::Watchlist))
+        .class(square_button_class(ButtonState::NotSelected))
         .into()
 }
 

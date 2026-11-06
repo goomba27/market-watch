@@ -161,7 +161,7 @@ impl cosmic::Application for AppModel {
     fn subscription(&self) -> Subscription<Self::Message> {
         let refresh_secs = self.config.settings.refresh_secs as u64;
         let refresh = if refresh_secs == 0 {
-            //0 would panic treat it as off
+            // 0 means off: `time::every` with a zero duration would panic, so run no timer
             Subscription::none()
         } else {
             time::every(Duration::from_secs(refresh_secs)).map(|_| Message::Tick)
@@ -231,8 +231,10 @@ impl cosmic::Application for AppModel {
                 {
                     list.tickers.push(symbol);
                     self.save_data();
-                    self.ticker_input.clear();
                 }
+                // Clear the field even when the symbol was empty or already in the list,
+                // so the old text doesn't sit there looking like it was ignored.
+                self.ticker_input.clear();
             }
             Message::RemoveTicker(ticker) => {
                 if let Some(list) = self.data.watchlists.get_mut(self.selected_list) {
@@ -253,17 +255,11 @@ impl cosmic::Application for AppModel {
             }
             Message::SetRefreshSecs(secs) => {
                 let mut settings = self.config.settings.clone();
-                //TODO: remove
-                eprintln!("refresh_secs changed to {secs}");
-
                 settings.refresh_secs = secs;
                 self.save_settings(settings);
             }
             Message::QuotesFetched(result) => {
                 self.in_flight = false;
-
-                // TODO: remove
-                eprintln!("Quotes Fetched: {result:#?}");
 
                 match result {
                     Ok(tickers) => {
@@ -277,9 +273,6 @@ impl cosmic::Application for AppModel {
                 }
             }
             Message::Tick => {
-                // TODO: Remove
-                eprintln!("tick, in_flight={}", self.in_flight);
-
                 if self.in_flight {
                     return Task::none();
                 }
