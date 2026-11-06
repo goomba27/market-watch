@@ -3422,6 +3422,7 @@ dependencies = [
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
+ "ron 0.12.3",
  "rust-embed",
  "serde",
  "tokio",
