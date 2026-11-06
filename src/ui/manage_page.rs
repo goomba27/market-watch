@@ -4,7 +4,7 @@ use crate::app::Message;
 use crate::globals;
 use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
-use crate::ui::common::{self, ListMode};
+use crate::ui::common::{self, HeaderButtons, ListMode};
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
@@ -28,7 +28,7 @@ pub fn create_new_list_view<'a>(list_name: &'a str) -> Element<'a, Message> {
         .push(name_field)
         .spacing(8);
 
-    common::page_layout(globals::TITLE_CREATE_LIST, content)
+    common::page_layout(globals::TITLE_CREATE_LIST, content, HeaderButtons::All)
 }
 
 pub fn edit_list_view<'a>(
@@ -41,6 +41,7 @@ pub fn edit_list_view<'a>(
         return common::page_layout(
             globals::TITLE_EDIT_LIST,
             widget::container(widget::text::body(globals::EMPTY_NO_LIST)).padding([16, 0]),
+            HeaderButtons::All,
         );
     }
 
@@ -64,5 +65,5 @@ pub fn edit_list_view<'a>(
 
     let content = widget::column::with_capacity(2).push(add_row).push(body);
 
-    common::page_layout(globals::TITLE_EDIT_LIST, content)
+    common::page_layout(globals::TITLE_EDIT_LIST, content, HeaderButtons::All)
 }

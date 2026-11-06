@@ -3,8 +3,7 @@
 use crate::app::Message;
 use crate::config::Settings;
 use crate::globals;
-use crate::ui::common;
-use crate::ui::common::ButtonState;
+use crate::ui::common::{self, ButtonState, HeaderButtons};
 use cosmic::Element;
 use cosmic::widget;
 
@@ -27,5 +26,9 @@ pub fn settings_page_view(settings: &Settings) -> Element<'_, Message> {
         .add(widget::settings::item(globals::ITEM_REFRESH_EVERY, buttons));
     //------------------------------------------
 
-    common::page_layout(globals::TITLE_SETTINGS, refresh_section)
+    common::page_layout(
+        globals::TITLE_SETTINGS,
+        refresh_section,
+        HeaderButtons::Back,
+    )
 }

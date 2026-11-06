@@ -19,3 +19,4 @@ debian/*
 .zed/
 teaching/
 /recommendations.md
+.claude/

@@ -12,33 +12,62 @@ use cosmic::iced::border::Radius;
 use cosmic::iced::{Alignment, Length};
 use cosmic::theme;
 use cosmic::widget;
-use cosmic::widget::button::Catalog;
-use cosmic::widget::button::Style;
+use cosmic::widget::button::{Catalog, Style};
 
 use yfinance_rs::Decimal;
 
-//TODO: add param to not display black on watchlist page show_back: bool
-//TODO: add param to not display settings on settings page show_settings: bool
-//TODO: title is off center
+/// Which of the header's two buttons a page shows.
+#[derive(Clone, Copy)]
+pub enum HeaderButtons {
+    /// Back and Settings.
+    All,
+    /// Only Settings.
+    Settings,
+    /// Only Back.
+    Back,
+}
 
-pub fn build_header<'a>(page_title: &'a str) -> Element<'a, Message> {
-    let title = widget::container(widget::text::title2(page_title))
-        .width(Length::Fill) //this two are needed for centered text with the container
-        .align_x(Alignment::Center);
+impl HeaderButtons {
+    fn show_settings(self) -> bool {
+        matches!(self, HeaderButtons::All | HeaderButtons::Settings)
+    }
 
-    let settings_button =
-        widget::button::icon(widget::icon::from_name("preferences-system-symbolic"))
-            .label(globals::LABEL_SETTINGS)
-            .on_press(Message::OpenPage(Page::Settings));
+    fn show_back(self) -> bool {
+        matches!(self, HeaderButtons::All | HeaderButtons::Back)
+    }
+}
+
+pub fn build_header<'a>(
+    page_title: &'a str,
+    header_buttons: HeaderButtons,
+) -> Element<'a, Message> {
+    let title = widget::text::title2(page_title).align_x(Alignment::Center);
+
+    let back = header_buttons.show_back().then(back_button);
+    let settings = header_buttons.show_settings().then(settings_button);
+
+    let left = widget::container(widget::row::with_capacity(1).push_maybe(back))
+        .width(Length::Fill)
+        .align_x(Alignment::Start);
+    let right = widget::container(widget::row::with_capacity(1).push_maybe(settings))
+        .width(Length::Fill)
+        .align_x(Alignment::End);
 
     widget::row::with_capacity(3)
-        .push(back_button())
+        .push(left)
         .push(title)
-        .push(settings_button)
+        .push(right)
         .align_y(Alignment::Center)
         .width(Length::Fill)
         .spacing(12)
         .padding(globals::INSET)
+        .into()
+}
+
+fn settings_button<'a>() -> Element<'a, Message> {
+    widget::button::icon(widget::icon::from_name("preferences-system-symbolic"))
+        .label(globals::LABEL_SETTINGS)
+        .on_press(Message::OpenPage(Page::Settings))
         .into()
 }
 
@@ -145,6 +174,7 @@ fn editable_row<'a>(ticker: &'a str) -> Element<'a, Message> {
 pub fn page_layout<'a>(
     title: &'a str,
     content: impl Into<Element<'a, Message>>,
+    header_buttons: HeaderButtons,
 ) -> Element<'a, Message> {
     let body = widget::container(content)
         .padding([0, globals::INSET])
@@ -152,7 +182,7 @@ pub fn page_layout<'a>(
         .height(Length::Fill);
 
     widget::column::with_capacity(2)
-        .push(build_header(title))
+        .push(build_header(title, header_buttons))
         .push(body)
         .width(Length::Fill)
         .height(Length::Fixed(globals::POPUP_HEIGHT))

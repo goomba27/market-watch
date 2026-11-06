@@ -6,7 +6,7 @@ use crate::app::{Message, Page};
 use crate::globals;
 use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
-use crate::ui::common::{self, ButtonState, ListMode};
+use crate::ui::common::{self, ButtonState, HeaderButtons, ListMode};
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
@@ -78,7 +78,7 @@ pub fn view<'a>(
         .push(tabs)
         .push(body);
 
-    common::page_layout(globals::TITLE_WATCHLIST, content)
+    common::page_layout(globals::TITLE_WATCHLIST, content, HeaderButtons::Settings)
 }
 
 pub fn watchlist_button(
