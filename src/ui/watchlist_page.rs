@@ -10,7 +10,6 @@ use crate::ui::common::{self, ButtonState, ListMode};
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
-
 use cosmic::widget;
 
 pub fn view<'a>(

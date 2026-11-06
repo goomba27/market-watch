@@ -16,12 +16,11 @@ pub fn settings_page_view(settings: &Settings) -> Element<'_, Message> {
         let button = if settings.refresh_secs == secs {
             widget::button::suggested(label).class(common::tab_style(ButtonState::Selected))
         } else {
-            widget::button::suggested(label).class(common::tab_style(ButtonState::NotSelected))
+            widget::button::standard(label).class(common::tab_style(ButtonState::NotSelected))
         };
 
         buttons = buttons.push(button.on_press(Message::SetRefreshSecs(secs)));
     }
-    //.class(common::tab_style(selected))
 
     let refresh_section = widget::settings::section()
         .title(globals::SECTION_REFRESH)

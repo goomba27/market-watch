@@ -7,7 +7,6 @@ use crate::app::{Message, Page};
 use crate::globals;
 use crate::model::ticker::Ticker;
 use crate::model::watchlist::Watchlist;
-use crate::ui::common;
 use cosmic::Element;
 use cosmic::iced::border::Radius;
 use cosmic::iced::{Alignment, Length};
@@ -57,7 +56,7 @@ pub enum ListMode {
     Editable,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ButtonState {
     Selected,
     NotSelected,
@@ -98,9 +97,9 @@ fn ticker_row<'a>(symbol: &'a str, quote: Option<&Ticker>) -> Element<'a, Messag
                 Ordering::Equal => theme::Text::Color(globals::DEFAULT_TEXT_COLOR),
             };
 
-            let price = widget::text(format!("${:}", q.price.round_dp(2))).size(18);
+            let price = widget::text(format!("${}", q.price.round_dp(2))).size(18);
 
-            let change = widget::text(format!("{:}%", q.change_percent.round_dp(2)))
+            let change = widget::text(format!("{}%", q.change_percent.round_dp(2)))
                 .class(style)
                 .size(16);
 
@@ -160,37 +159,30 @@ pub fn page_layout<'a>(
         .into()
 }
 
-pub fn square_rounded_corners(mut style: Style) -> Style {
+fn square_rounded_corners(mut style: Style) -> Style {
     style.border_radius = Radius::from(globals::TAB_CORNER_RADIUS);
     style
 }
 
-pub fn base(selected: bool) -> theme::Button {
-    match selected {
-        true => theme::Button::Suggested,
-        false => theme::Button::Standard,
+fn base(button_state: ButtonState) -> theme::Button {
+    match button_state {
+        ButtonState::Selected => theme::Button::Suggested,
+        ButtonState::NotSelected => theme::Button::Standard,
     }
 }
 
 /// The stock button look (accent when selected), with squarer rounded corners.
 pub fn tab_style(button_state: ButtonState) -> theme::Button {
-    let selected = match button_state {
-        ButtonState::Selected => true,
-        ButtonState::NotSelected => false,
-    };
-
     theme::Button::Custom {
         active: Box::new(move |focused, t| {
-            common::square_rounded_corners(t.active(focused, false, &common::base(selected)))
+            square_rounded_corners(t.active(focused, false, &base(button_state)))
         }),
-        disabled: Box::new(move |t| {
-            common::square_rounded_corners(t.disabled(&common::base(selected)))
-        }),
+        disabled: Box::new(move |t| square_rounded_corners(t.disabled(&base(button_state)))),
         hovered: Box::new(move |focused, t| {
-            common::square_rounded_corners(t.hovered(focused, false, &common::base(selected)))
+            square_rounded_corners(t.hovered(focused, false, &base(button_state)))
         }),
         pressed: Box::new(move |focused, t| {
-            common::square_rounded_corners(t.pressed(focused, false, &common::base(selected)))
+            square_rounded_corners(t.pressed(focused, false, &base(button_state)))
         }),
     }
 }
