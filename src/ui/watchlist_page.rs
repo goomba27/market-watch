@@ -10,7 +10,9 @@ use crate::ui::common::{self, ListMode};
 
 use cosmic::Element;
 use cosmic::iced::{Alignment, Length};
+use cosmic::theme;
 use cosmic::widget;
+use cosmic::widget::button::Style;
 
 pub fn view<'a>(
     watchlists: &'a [Watchlist],
@@ -88,12 +90,6 @@ pub fn watchlist_button(
 
     let badge = widget::container(widget::text::caption(count.to_string())).padding([1, 6]);
 
-    let style = if selected {
-        cosmic::theme::Button::Suggested
-    } else {
-        cosmic::theme::Button::Standard
-    };
-
     // button: share the row equally
     widget::button::custom(
         widget::row::with_capacity(2)
@@ -103,10 +99,43 @@ pub fn watchlist_button(
             .align_y(Alignment::Center)
             .height(Length::Fill),
     )
-    .class(style)
+    .class(tab_class(selected))
     .width(Length::Fill)
     .height(Length::Fixed(48.0))
     .padding([8, 14])
     .on_press(on_press)
     .into()
+}
+
+/// Button class for a watchlist tab: the stock `Suggested` (selected) or `Standard` look, but
+/// with the theme's small corner radius instead of the default pill shape.
+fn tab_class(selected: bool) -> theme::Button {
+    use cosmic::widget::button::Catalog;
+
+    // `theme::Button` is not `Clone`, so each closure below rebuilds its own base class.
+    fn base(selected: bool) -> theme::Button {
+        if selected {
+            theme::Button::Suggested
+        } else {
+            theme::Button::Standard
+        }
+    }
+
+    fn square(mut style: Style, theme: &cosmic::Theme) -> Style {
+        style.border_radius = theme.cosmic().corner_radii.radius_xs.into();
+        style
+    }
+
+    theme::Button::Custom {
+        active: Box::new(move |focused, theme| {
+            square(theme.active(focused, false, &base(selected)), theme)
+        }),
+        disabled: Box::new(move |theme| square(theme.disabled(&base(selected)), theme)),
+        hovered: Box::new(move |focused, theme| {
+            square(theme.hovered(focused, false, &base(selected)), theme)
+        }),
+        pressed: Box::new(move |focused, theme| {
+            square(theme.pressed(focused, false, &base(selected)), theme)
+        }),
+    }
 }
