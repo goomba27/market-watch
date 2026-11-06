@@ -21,11 +21,13 @@ pub fn view<'a>(
 
     let edit_list_button = widget::button::icon(widget::icon::from_name("edit-symbolic"))
         .label(globals::LABEL_MODIFY_LIST)
-        .on_press(Message::OpenPage(Page::EditList));
+        .on_press(Message::OpenPage(Page::EditList))
+        .class(common::square_button_class(ButtonState::NotSelected));
 
     let new_list_button = widget::button::icon(widget::icon::from_name("list-add-symbolic"))
         .label(globals::LABEL_CREATE_LIST)
-        .on_press(Message::OpenPage(Page::Create));
+        .on_press(Message::OpenPage(Page::Create))
+        .class(common::square_button_class(ButtonState::NotSelected));
 
     let action_row = widget::row::with_capacity(2)
         .push(edit_list_button)
@@ -68,7 +70,7 @@ pub fn view<'a>(
         .align_y(Alignment::Start);
 
     let tabs = widget::container(watchlist_tabs)
-        .padding([8, 0])
+        .padding([24, 0])
         .width(Length::Fill);
 
     let body = common::generate_ticker_list(selected, quotes, ListMode::ReadOnly);
@@ -88,9 +90,14 @@ pub fn watchlist_button(
     on_press: Message,
 ) -> Element<'_, Message> {
     // label: wraps instead of forcing the button wider
-    let label = widget::text::body(name).width(Length::Fill);
+    let label = widget::text::body(name)
+        .size(globals::BODY_TEXT_SIZE)
+        .width(Length::Fill);
 
-    let badge = widget::container(widget::text::caption(count.to_string())).padding([1, 6]);
+    let badge = widget::container(
+        widget::text::caption(count.to_string()).size(globals::CAPTION_TEXT_SIZE),
+    )
+    .padding([1, 6]);
 
     // button: share the row equally
     widget::button::custom(
@@ -101,7 +108,7 @@ pub fn watchlist_button(
             .align_y(Alignment::Center)
             .height(Length::Fill),
     )
-    .class(common::tab_style(button_state))
+    .class(common::square_button_class(button_state))
     .width(Length::Fill)
     .height(Length::Fixed(48.0))
     .padding([8, 14])

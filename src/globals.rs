@@ -14,6 +14,13 @@ pub const REFRESH_CHOICES: [(usize, &str); 5] = [
 ];
 pub const INSET: u16 = 16;
 
+// Text sizes
+pub const TITLE_TEXT_SIZE: f32 = 31.0;
+pub const BODY_TEXT_SIZE: f32 = 16.0;
+pub const CAPTION_TEXT_SIZE: f32 = 14.0;
+pub const PRICE_TEXT_SIZE: f32 = 20.0;
+pub const CHANGE_TEXT_SIZE: f32 = 18.0;
+
 /// Corner radius for tabs: squarer than the default pill-shaped buttons.
 pub const TAB_CORNER_RADIUS: f32 = 8.0;
 

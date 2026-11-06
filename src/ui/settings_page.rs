@@ -13,9 +13,11 @@ pub fn settings_page_view(settings: &Settings) -> Element<'_, Message> {
 
     for (secs, label) in globals::REFRESH_CHOICES {
         let button = if settings.refresh_secs == secs {
-            widget::button::suggested(label).class(common::tab_style(ButtonState::Selected))
+            widget::button::suggested(label)
+                .class(common::square_button_class(ButtonState::Selected))
         } else {
-            widget::button::standard(label).class(common::tab_style(ButtonState::NotSelected))
+            widget::button::standard(label)
+                .class(common::square_button_class(ButtonState::NotSelected))
         };
 
         buttons = buttons.push(button.on_press(Message::SetRefreshSecs(secs)));

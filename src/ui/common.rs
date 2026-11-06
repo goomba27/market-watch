@@ -41,7 +41,9 @@ pub fn build_header<'a>(
     page_title: &'a str,
     header_buttons: HeaderButtons,
 ) -> Element<'a, Message> {
-    let title = widget::text::title2(page_title).align_x(Alignment::Center);
+    let title = widget::text::title2(page_title)
+        .size(globals::TITLE_TEXT_SIZE)
+        .align_x(Alignment::Center);
 
     let back = header_buttons.show_back().then(back_button);
     let settings = header_buttons.show_settings().then(settings_button);
@@ -107,7 +109,9 @@ pub fn generate_ticker_list<'a>(
             }
             row_acc.into_element()
         }
-        _ => widget::text::body(globals::EMPTY_TICKER_LIST).into(),
+        _ => widget::text::body(globals::EMPTY_TICKER_LIST)
+            .size(globals::BODY_TEXT_SIZE)
+            .into(),
     };
 
     widget::container(widget::scrollable::vertical(list))
@@ -126,11 +130,12 @@ fn ticker_row<'a>(symbol: &'a str, quote: Option<&Ticker>) -> Element<'a, Messag
                 Ordering::Equal => theme::Text::Color(globals::DEFAULT_TEXT_COLOR),
             };
 
-            let price = widget::text(format!("${}", q.price.round_dp(2))).size(18);
+            let price =
+                widget::text(format!("${}", q.price.round_dp(2))).size(globals::PRICE_TEXT_SIZE);
 
             let change = widget::text(format!("{}%", q.change_percent.round_dp(2)))
                 .class(style)
-                .size(16);
+                .size(globals::CHANGE_TEXT_SIZE);
 
             widget::column::with_capacity(2)
                 .push(price)
@@ -138,13 +143,17 @@ fn ticker_row<'a>(symbol: &'a str, quote: Option<&Ticker>) -> Element<'a, Messag
                 .align_x(Alignment::End)
         }
         None => widget::column::with_capacity(2)
-            .push(widget::text(globals::NO_PRICE).size(18))
-            .push(widget::text(globals::NO_PRICE).size(16))
+            .push(widget::text(globals::NO_PRICE).size(globals::PRICE_TEXT_SIZE))
+            .push(widget::text(globals::NO_PRICE).size(globals::CHANGE_TEXT_SIZE))
             .align_x(Alignment::End),
     };
 
     widget::row::with_capacity(2)
-        .push(widget::text::body(symbol).width(Length::Fill))
+        .push(
+            widget::text::body(symbol)
+                .size(globals::BODY_TEXT_SIZE)
+                .width(Length::Fill),
+        )
         .push(price_area)
         .align_y(Alignment::Center)
         .into()
@@ -159,7 +168,7 @@ fn editable_row<'a>(ticker: &'a str) -> Element<'a, Message> {
         .width(Length::Fill)
         .align_x(Alignment::End);
 
-    let text = widget::text::body(ticker);
+    let text = widget::text::body(ticker).size(globals::BODY_TEXT_SIZE);
 
     widget::row::with_capacity(2)
         .push(text)
@@ -189,11 +198,6 @@ pub fn page_layout<'a>(
         .into()
 }
 
-fn square_rounded_corners(mut style: Style) -> Style {
-    style.border_radius = Radius::from(globals::TAB_CORNER_RADIUS);
-    style
-}
-
 fn base(button_state: ButtonState) -> theme::Button {
     match button_state {
         ButtonState::Selected => theme::Button::Suggested,
@@ -201,18 +205,29 @@ fn base(button_state: ButtonState) -> theme::Button {
     }
 }
 
-/// The stock button look (accent when selected), with squarer rounded corners.
-pub fn tab_style(button_state: ButtonState) -> theme::Button {
+/// The class to pass to a button's `.class(..)`: the stock look (accent when selected,
+/// plain otherwise) with square corners in every state.
+///
+/// A class is the *whole* button style, one `Style` for each state. This builds those from
+/// the stock class and runs each one through `with_square_corners`.
+pub fn square_button_class(button_state: ButtonState) -> theme::Button {
+    // Sets the corner radius on one state's appearance (a `Style`: colours, border, radius)
+    // and leaves everything else as it was.
+    let with_square_corners = |mut style: Style| {
+        style.border_radius = Radius::from(globals::TAB_CORNER_RADIUS);
+        style
+    };
+
     theme::Button::Custom {
         active: Box::new(move |focused, t| {
-            square_rounded_corners(t.active(focused, false, &base(button_state)))
+            with_square_corners(t.active(focused, false, &base(button_state)))
         }),
-        disabled: Box::new(move |t| square_rounded_corners(t.disabled(&base(button_state)))),
+        disabled: Box::new(move |t| with_square_corners(t.disabled(&base(button_state)))),
         hovered: Box::new(move |focused, t| {
-            square_rounded_corners(t.hovered(focused, false, &base(button_state)))
+            with_square_corners(t.hovered(focused, false, &base(button_state)))
         }),
         pressed: Box::new(move |focused, t| {
-            square_rounded_corners(t.pressed(focused, false, &base(button_state)))
+            with_square_corners(t.pressed(focused, false, &base(button_state)))
         }),
     }
 }
