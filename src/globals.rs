@@ -36,11 +36,16 @@ pub const LABEL_SETTINGS: &str = "Settings";
 pub const LABEL_MODIFY_LIST: &str = "Modify List";
 pub const LABEL_CREATE_LIST: &str = "Create List";
 pub const LABEL_SAVE_LIST: &str = "Save List";
+pub const LABEL_SAVE_NAME: &str = "Save Name";
 pub const LABEL_ADD_TO_LIST: &str = "Add to List";
 
 // Text field placeholders
 pub const PLACEHOLDER_LIST_NAME: &str = "List name";
 pub const PLACEHOLDER_SYMBOL: &str = "Symbol, e.g AAPL";
+
+// Text field labels
+pub const FIELD_CHANGE_LIST_NAME: &str = "Change List Name";
+pub const FIELD_NEW_SYMBOL: &str = "New Symbol";
 
 // Settings page
 pub const SECTION_REFRESH: &str = "Refresh";

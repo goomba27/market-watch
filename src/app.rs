@@ -43,6 +43,7 @@ pub struct AppModel {
     page: Page,
     list_name: String,
     ticker_input: String,
+    rename_input: String,
 
     /// True while a quote fetch is running, so ticks don't stack requests.
     in_flight: bool,
@@ -62,6 +63,8 @@ pub enum Message {
     TickerInputChanged(String),
     AddTicker(String),
     RemoveTicker(String),
+    SaveListName(String),
+    RenameInputChanged(String),
 
     //Prices
     QuotesFetched(Result<Vec<Ticker>, String>),
@@ -220,8 +223,32 @@ impl cosmic::Application for AppModel {
                 self.page = Page::Watchlist;
             }
             Message::SelectList(i) => self.selected_list = i,
-            Message::OpenPage(page) => self.page = page,
+            Message::OpenPage(page) => {
+                // The edit page opens with the list's current name in the rename field.
+                self.rename_input = match page {
+                    Page::EditList => self
+                        .data
+                        .watchlists
+                        .get(self.selected_list)
+                        .map(|list| list.name.clone())
+                        .unwrap_or_default(),
+                    _ => String::new(),
+                };
+                self.ticker_input.clear();
+                self.page = page;
+            }
             Message::NewListNameChanged(name) => self.list_name = name,
+            Message::SaveListName(name) => {
+                let new_name = name.trim().to_string();
+
+                if !new_name.is_empty()
+                    && let Some(list) = self.data.watchlists.get_mut(self.selected_list)
+                {
+                    list.name = new_name;
+                    self.save_data();
+                }
+            }
+            Message::RenameInputChanged(text) => self.rename_input = text,
             Message::TickerInputChanged(text) => self.ticker_input = text,
             Message::AddTicker(symbol) => {
                 let symbol = symbol.trim().to_uppercase();
@@ -299,6 +326,7 @@ impl cosmic::Application for AppModel {
             Page::EditList => ui::manage_page::edit_list_view(
                 self.data.watchlists.get(self.selected_list),
                 &self.ticker_input,
+                &self.rename_input,
                 &self.quotes,
             ),
             Page::Settings => ui::settings_page::settings_page_view(&self.config.settings),
