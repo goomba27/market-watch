@@ -7,6 +7,10 @@ I am building this after finishing the Rust book, as a good next step.
 > [!NOTE]
 > This is still a work in progress.
 
+<img width="350" height="350" alt="Screenshot_2026-11-07_19-53-52" src="https://github.com/user-attachments/assets/1f0ee6a8-5450-4f9e-b985-97937c6a9017" />
+<img width="350" height="350" alt="Screenshot_2026-11-07_19-53-42" src="https://github.com/user-attachments/assets/fb1a6550-7ae1-4d07-9817-815c09c58cb5" />
+<img width="350" height="350" alt="Screenshot_2026-11-07_19-53-36" src="https://github.com/user-attachments/assets/4f0c968a-b121-4df9-831d-7fc5db201a53" />
+
 ## Installation
 
 A [justfile](./justfile) is included by default for the [casey/just][just] command runner.
